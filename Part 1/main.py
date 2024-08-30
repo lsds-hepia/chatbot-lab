@@ -74,18 +74,18 @@ def load_docs(bucket_name,local_dir):
     for item in response['Contents']:
             key = item['Key']
             if key.endswith('.pdf'):
-                local_path = os.path.join(local_dir, key)
-                s3_client.download_file(Bucket=bucket_name, Key=key, Filename=local_path)
+                local_filename = os.path.join(local_dir, key)
+                s3_client.download_file(Bucket=bucket_name, Key=key, Filename=local_filename)
 
    
-    loader= PyPDFDirectoryLoader(local_dir)
-    pages = loader.load_and_split()
-    return pages
+    
 
 
 
 ## Split pages/text into chunks
-def split_text(pages, chunk_size, chunk_overlap):
+def split_text(pages, chunk_size, chunk_overlap, local_dir):
+    loader= PyPDFDirectoryLoader(local_dir)
+    pages = loader.load_and_split()
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     chunks = text_splitter.split_documents(pages)   
     return chunks
@@ -114,7 +114,7 @@ def generate_embeddings(bedrock_client, chunks,awsauth,index_name):
 def main():
 
     docs= load_docs(BUCKET_NAME,LOCAL_DIR)
-    chunks=split_text(docs, 1000, 100)
+    chunks=split_text(docs, 1000, 100, LOCAL_DIR)
     print("Sample chunk:", chunks[0])
     create_index(index_name)
     embeddings = generate_embeddings(bedrock_client, chunks,awsauth,index_name)
