@@ -14,7 +14,7 @@ index_name = "cloud_lecture_test"
 ## S3_client
 s3_client = boto3.client('s3')
 ## Bucket name where documents are stored
-BUCKET_NAME = "chatbotlab"
+BUCKET_NAME = "cloud-lecture-2023"
 
 ## Bedrock client
 bedrock_client = boto3.client(service_name="bedrock-runtime")
@@ -25,7 +25,7 @@ credentials = boto3.Session().get_credentials()
 awsauth = AWSV4SignerAuth(credentials, 'us-east-1', 'aoss')
 
 ## Vector DB endpoint
-host= 'd7gvxdj7jpz3h3bj0xq6.us-east-1.aoss.amazonaws.com'
+host= 'ispfynbvy6eov4efdsqd.us-east-1.aoss.amazonaws.com'
 
 ## Opensearch Client
 OpenSearch_client = OpenSearch(
@@ -91,8 +91,12 @@ def split_text(pages, chunk_size, chunk_overlap, local_dir):
     return chunks
  
 ## Generate embeddings and index them using Opensearch
+# def generate_embeddings():
 
-def generate_embeddings(bedrock_client, chunks,awsauth,index_name):
+# def store_embeddings():
+
+
+def generate_store_embeddings(bedrock_client, chunks,awsauth,index_name):
     embeddings_model = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1", client=bedrock_client)
     docsearch = OpenSearchVectorSearch.from_documents(
         chunks,
@@ -117,7 +121,7 @@ def main():
     chunks=split_text(docs, 1000, 100, LOCAL_DIR)
     print("Sample chunk:", chunks[0])
     create_index(index_name)
-    embeddings = generate_embeddings(bedrock_client, chunks,awsauth,index_name)
+    embeddings = generate_store_embeddings(bedrock_client, chunks,awsauth,index_name)
     print("Embeddings processing completed", embeddings)
 
 
