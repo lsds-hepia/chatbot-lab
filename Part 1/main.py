@@ -69,7 +69,7 @@ def create_index(index_name):
 
 
 ## Load docs from S3
-def load_docs(bucket_name,local_dir):
+def download_documents(bucket_name,local_dir):
     response = s3_client.list_objects_v2(Bucket=bucket_name)
     for item in response['Contents']:
             key = item['Key']
@@ -117,7 +117,7 @@ def generate_store_embeddings(bedrock_client, chunks,awsauth,index_name):
 ## main 
 def main():
 
-    docs= load_docs(BUCKET_NAME,LOCAL_DIR)
+    docs= download_documents(BUCKET_NAME,LOCAL_DIR)
     chunks=split_text(docs, 1000, 100, LOCAL_DIR)
     print("Sample chunk:", chunks[0])
     create_index(index_name)
