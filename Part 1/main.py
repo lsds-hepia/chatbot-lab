@@ -1,14 +1,18 @@
 import boto3
 import os
+from tqdm.auto import tqdm
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import BedrockEmbeddings
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_community.vectorstores import OpenSearchVectorSearch
+import uuid
+import json
+
 
 ##  Local directory for storing PDF files
 LOCAL_DIR = "pdfs" 
-index_name = "cloud_lecture_test"
+index_name = "cloud_lecture_test3"
 
 
 ## S3_client
@@ -25,7 +29,7 @@ credentials = boto3.Session().get_credentials()
 awsauth = AWSV4SignerAuth(credentials, 'us-east-1', 'aoss')
 
 ## Vector DB endpoint
-host= 'ispfynbvy6eov4efdsqd.us-east-1.aoss.amazonaws.com'
+host= 'd7gvxdj7jpz3h3bj0xq6.us-east-1.aoss.amazonaws.com'
 
 ## Opensearch Client
 OpenSearch_client = OpenSearch(
@@ -34,7 +38,6 @@ OpenSearch_client = OpenSearch(
     use_ssl=True,
     verify_certs=True,
     connection_class=RequestsHttpConnection,
-    timeout=300
     
 )
 
@@ -83,19 +86,38 @@ def download_documents(bucket_name,local_dir):
 
 
 ## Split pages/text into chunks
-def split_text(pages, chunk_size, chunk_overlap, local_dir):
-    loader= PyPDFDirectoryLoader(local_dir)
-    pages = loader.load_and_split()
+def split_text(docs, chunk_size, chunk_overlap):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    chunks = text_splitter.split_documents(pages)   
+    chunks = text_splitter.split_documents(docs)   
+
     return chunks
  
-## Generate embeddings and index them using Opensearch
-# def generate_embeddings():
+## Generate embeddings 
+def generate_embeddings(bedrock_client, chunks):
+    embeddings_model = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1", client=bedrock_client)
+    chunks_list=[chunk.page_content for chunk in chunks]
+    embeddings = embeddings_model.embed_documents(chunks_list)
+    return embeddings
 
-# def store_embeddings():
+# Store generated embeddings into an OpenSearch index.
+def store_embeddings(embeddings, texts, meta_data, host, awsauth, index_name):  
+    docsearch = OpenSearchVectorSearch.from_embeddings(
+        embeddings,
+        texts,
+        meta_data,
+        opensearch_url=f'https://{host}:443',
+        http_auth=awsauth,
+        use_ssl=True,
+        verify_certs=True,
+        connection_class=RequestsHttpConnection,
+        index_name=index_name,
+        bulk_size=1000
+)
+
+    return docsearch
 
 
+# Func to do both generating and storing embeddings
 def generate_store_embeddings(bedrock_client, chunks,awsauth,index_name):
     embeddings_model = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1", client=bedrock_client)
     docsearch = OpenSearchVectorSearch.from_documents(
@@ -117,13 +139,23 @@ def generate_store_embeddings(bedrock_client, chunks,awsauth,index_name):
 ## main 
 def main():
 
-    docs= download_documents(BUCKET_NAME,LOCAL_DIR)
-    chunks=split_text(docs, 1000, 100, LOCAL_DIR)
-    print("Sample chunk:", chunks[0])
-    create_index(index_name)
-    embeddings = generate_store_embeddings(bedrock_client, chunks,awsauth,index_name)
-    print("Embeddings processing completed", embeddings)
+    download_documents(BUCKET_NAME,LOCAL_DIR)
+    loader= PyPDFDirectoryLoader(LOCAL_DIR)
+    docs = loader.load()
+    print(docs[80])
+    chunks = split_text(docs, 1000, 100)
+    print(chunks[80])
+    embeddings= generate_embeddings(bedrock_client, chunks)
+    print(embeddings[80])
+    texts = [chunk.page_content for chunk in chunks]
+     # Prepare metadata for each chunk
+    meta_data = [{'source': chunk.metadata['source'], 'page': chunk.metadata['page'] + 1} for chunk in chunks]
+    print(embeddings[80])
+    print(meta_data[80])
+    store_embeddings(embeddings, texts, meta_data ,host, awsauth,index_name)
 
+
+   
 
   
 
