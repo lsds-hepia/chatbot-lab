@@ -13,7 +13,7 @@
 Create an S3 bucket and upload a few PDF files (Detailed steps are provided in the first session).
 
 ### Step 2: Vector Store Creation
-To set up the Vector Store, run the following command: `python Create-Vector-DB.py`
+To set up the Vector Store, run the following command: `python create-vector-db.py`
 
 This script performs the following actions:
 
