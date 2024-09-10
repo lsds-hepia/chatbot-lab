@@ -2,7 +2,7 @@ import boto3
 import os
 
 LOCAL_DIR = "pdfs"
-BUCKET_NAME = 'cloud-lecture-2023'
+BUCKET_NAME = 'cloud-lecture-nabil-2024-25'
 
 # Initiate S3 client
 s3_client = boto3.client('s3')

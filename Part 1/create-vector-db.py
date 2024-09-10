@@ -5,8 +5,8 @@ import time
 
 
 client = boto3.client('opensearchserverless')
-service = 'aoss'
-Vector_store_name='test2'
+#service = 'aoss'
+Vector_store_name='test-nabil'
 
 def createEncryptionPolicy(client):
     """Creates an encryption policy that matches all collections beginning with test"""
