@@ -12,7 +12,7 @@ import json
 
 ##  Local directory for storing PDF files
 LOCAL_DIR = "pdfs" 
-index_name = "cloud_lecture_test3"
+index_name = "cloud_lecture"
 
 
 ## S3_client
@@ -29,7 +29,7 @@ credentials = boto3.Session().get_credentials()
 awsauth = AWSV4SignerAuth(credentials, 'us-east-1', 'aoss')
 
 ## Vector DB endpoint
-host= 'd7gvxdj7jpz3h3bj0xq6.us-east-1.aoss.amazonaws.com'
+host= 'j6phg34iv0f2rlvxwawd.us-east-1.aoss.amazonaws.com'
 
 ## Opensearch Client
 OpenSearch_client = OpenSearch(
@@ -142,16 +142,16 @@ def main():
     download_documents(BUCKET_NAME,LOCAL_DIR)
     loader= PyPDFDirectoryLoader(LOCAL_DIR)
     docs = loader.load()
-    print(docs[80])
+    print(docs[1])
     chunks = split_text(docs, 1000, 100)
-    print(chunks[80])
+    print(chunks[1])
     embeddings= generate_embeddings(bedrock_client, chunks)
-    print(embeddings[80])
+    print(embeddings[1])
     texts = [chunk.page_content for chunk in chunks]
      # Prepare metadata for each chunk
     meta_data = [{'source': chunk.metadata['source'], 'page': chunk.metadata['page'] + 1} for chunk in chunks]
-    print(embeddings[80])
-    print(meta_data[80])
+    print(embeddings[1])
+    print(meta_data[1])
     store_embeddings(embeddings, texts, meta_data ,host, awsauth,index_name)
 
 

@@ -4,7 +4,7 @@
 1. AWS CLI: Ensure AWS CLI is installed and configured on your laptop(refer to Session 1)
 2. Ensure python is installed: python 3.8 or higher
 2. Install required python libraries listed in the 'requirements.txt': 
-`pip install -r requirement.txt`
+`pip3 install -r requirements.txt`
 
 
 ## Part 1: 
@@ -32,3 +32,7 @@ The main.py script will:
 2. Split them into chunks.
 3. Generate embeddings from the chunks.
 4. Store these embeddings in the OpenSearch Vector DB.
+
+
+## Part 2:
+
