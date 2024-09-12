@@ -41,14 +41,14 @@ After setting up the S3 bucket and Vector Store, we could process PDF files to g
 
 Run: 
 
-`python3 main.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name]`
+`python3 main.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name] --local_path [local_path]`
 
 Where: 
 
 - **--bucket_name**: The name of the S3 bucket containing the PDF files.
 - **--endpoint**: Endpoint for the vector database.
 - **--index_name**: The index_name where to store the embeddings in the collection.
-- **--local_dir**: 
+- **--local_path**: local_path  
 
 The main.py script will:
 
