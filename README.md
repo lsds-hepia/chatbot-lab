@@ -48,6 +48,7 @@ Where:
 - **--bucket_name**: The name of the S3 bucket containing the PDF files.
 - **--endpoint**: Endpoint for the vector database.
 - **--index_name**: The index_name where to store the embeddings in the collection.
+- **--local_dir**: 
 
 The main.py script will:
 

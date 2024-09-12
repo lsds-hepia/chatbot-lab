@@ -11,9 +11,6 @@ import json
 import argparse
 
 
-##  Local directory for storing PDF files
-LOCAL_DIR = "pdfs" 
-
 
 
 ## S3_client
@@ -127,7 +124,7 @@ def generate_store_embeddings(bedrock_client, chunks,awsauth,index_name):
 
 
 ## main 
-def main(bucket_name, endpoint,index_name):
+def main(bucket_name, endpoint,index_name, local_path):
 
     ## Opensearch Client
     OpenSearch_client = OpenSearch(
@@ -139,8 +136,8 @@ def main(bucket_name, endpoint,index_name):
         
     )
 
-    download_documents(bucket_name,LOCAL_DIR)
-    loader= PyPDFDirectoryLoader(LOCAL_DIR)
+    download_documents(bucket_name,local_path)
+    loader= PyPDFDirectoryLoader(local_path)
     docs = loader.load()
     print(docs[1])
     chunks = split_text(docs, 1000, 100)
@@ -168,5 +165,6 @@ if __name__== "__main__":
     parser.add_argument("--bucket_name", help="The S3 bucket name where documents are stored")
     parser.add_argument("--endpoint", help="The OpenSearch service endpoint")
     parser.add_argument("--index_name", help="The name of the OpenSearch index")
+    parser.add_argument("--local_path", help="local path")
     args = parser.parse_args()
-    main(args.bucket_name, args.endpoint, args.index_name)
+    main(args.bucket_name, args.endpoint, args.index_name, args.local_path)
