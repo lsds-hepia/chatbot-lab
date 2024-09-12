@@ -61,3 +61,25 @@ The main.py script will:
 
 ## Part 2:
 
+### Set up environment
+
+Install required python libraries listed in the 'requirements.txt': 
+
+`pip3 install -r requirements.txt`
+
+### Step 1:  Create VM
+
+## Step 2: Running the app
+
+Launch the Streamlit application which interacts with the Vector Store , LLM for embeddings and LLM for text generation: 
+
+`streamlit run main.py -- --endpoint [YourVectorDBEndpoint] --index_name [YourIndexName]`
+
+Where:
+
+- **--endpoint**: Endpoint for the vector database.
+- **--index_name**: The index_name where to store the embeddings in the collection.
+
+## Step 3: Accessing the app:
+
+Once the app starts, navigate to this URL `http://[public_ip_adress_of_yourVM]:8501` in your web browser to start interacting with your chatbot. 
