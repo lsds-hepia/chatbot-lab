@@ -13,7 +13,7 @@
 ### Step 1: Object storage Creation
 Create an S3 bucket and upload a few PDF files by running: 
 
-`python create-S3-and-put-docs.py --bucket_name [YourBucketName] --local_path [PathToYourPDFFiles]`
+`python3 create-S3-and-put-docs.py --bucket_name [YourBucketName] --local_path [PathToYourPDFFiles]`
 
 Where:
 - **--bucket_name**: The name for the new S3 bucket to be created.
@@ -23,11 +23,11 @@ Where:
 ### Step 2: Vector Store Creation
 Create a vector database for storing embeddings by running: 
 
-`python create-vector-db.py --collection_name [Name_of_colletion] --IAM_user [YourIAM_User]`
+`python3 create-vector-db.py --collection_name [Name_of_colletion] --iam_user [YourIAM_user]`
 
 Where: 
 - **--collection_name**: Name of the collection that you want to create to store embeddings.
-- **--IAM_USER** : For example for group 14 the IAM USER = master-group-14
+- **--iam_user** : For example for group 14 the iam_user is `master-group-14`
 
 
 This script performs the following actions:
@@ -41,7 +41,7 @@ After setting up the S3 bucket and Vector Store, we could process PDF files to g
 
 Run: 
 
-`python main.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint]`
+`python3 main.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name]`
 
 Where: 
 
