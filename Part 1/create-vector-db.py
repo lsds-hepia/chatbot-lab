@@ -152,7 +152,7 @@ def main(collection_name,IAM_USER):
 
 if __name__== "__main__":
     parser = argparse.ArgumentParser(description="Create collection")
-    parser.add_argument("collection_name", help="The name of the collection")
-    parser.add_argument("iam_user", help="The iam user")
+    parser.add_argument("--collection_name", help="The name of the collection")
+    parser.add_argument("--iam_user", help="The iam user")
     args = parser.parse_args()
     main(args.collection_name,args.iam_user)

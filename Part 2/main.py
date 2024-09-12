@@ -7,8 +7,9 @@ from langchain.chains import RetrievalQA
 from langchain_community.embeddings import BedrockEmbeddings
 from langchain_community.chat_models import BedrockChat
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
-
 from langchain import PromptTemplate
+import argparse
+
 # Embeddings Client
 bedrock_client = boto3.client(service_name="bedrock-runtime")
 
@@ -24,26 +25,26 @@ st.set_page_config(
 st.title("Chat with your lecture")
 
 
-# AWS and OpenSearch Configuration
-host = 'd7gvxdj7jpz3h3bj0xq6.us-east-1.aoss.amazonaws.com'  
-index_name = 'cloud_lecture'
-awsauth = AWSV4SignerAuth(boto3.Session().get_credentials(), 'us-east-1', 'aoss')
+
 
 # OpenSearch Client
-opensearch_client = OpenSearch(
-    hosts=[{'host': host, 'port': 443}],
+def ospensearch_client(endpoint):
+    awsauth = AWSV4SignerAuth(boto3.Session().get_credentials(), 'us-east-1', 'aoss')
+    client = OpenSearch(
+    hosts=[{'host': endpoint, 'port': 443}],
     http_auth=awsauth,
     use_ssl=True,
     verify_certs=True,
     connection_class=RequestsHttpConnection,
-)
+    )
+    return client
 
 def get_embedding(question, bedrock_client):
     embeddings_model = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1", client=bedrock_client)
     embedding = embeddings_model.embed_query(question)
     return embedding
 
-def similarity_search(embed_query, index_name):
+def similarity_search(client, embed_query, index_name):
     query_body = {
         "size": 5,
         "query": {
@@ -55,7 +56,7 @@ def similarity_search(embed_query, index_name):
             }
         }
     }
-    response = opensearch_client.search(index=index_name, body=query_body)
+    response = client.search(index=index_name, body=query_body)
     return response['hits']['hits']
 
 def prepare_prompt(question, context):
@@ -85,7 +86,9 @@ def generate_answer(prompt):
     return answer
 
 
-def main():
+def main(endpoint, index_name):
+
+    oss_client= ospensearch_client(endpoint)
 
     # initialize chat session in streamlit if not already present
     if "chat_history" not in st.session_state:
@@ -110,7 +113,7 @@ def main():
  
         embed_question= get_embedding(user_prompt,bedrock_client)
         print(embed_question)
-        sim_results = similarity_search(embed_question, index_name)
+        sim_results = similarity_search(oss_client, embed_question, index_name)
         context = [i['_source']['text'] for i in sim_results]
         print(context)
         prompt = prepare_prompt(user_prompt, context)
@@ -122,6 +125,11 @@ def main():
                 st.markdown(message["content"])
 
 if __name__== "__main__":
-    main()
+    # Argument parsing
+    parser = argparse.ArgumentParser(description='Configure endpoint and index name for the lecture chat application.')
+    parser.add_argument('endpoint', type=str, help='The endpoint for the OpenSearch service.')
+    parser.add_argument('index_name', type=str, help='The index name for storing embeddings.')
+    args = parser.parse_args()
+    main(args.endpoint, args.index_name)
 
  

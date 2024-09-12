@@ -165,8 +165,8 @@ def main(bucket_name, endpoint,index_name):
 
 if __name__== "__main__":
     parser = argparse.ArgumentParser(description="Process PDF documents and store their embeddings.")
-    parser.add_argument("bucket_name", help="The S3 bucket name where documents are stored")
-    parser.add_argument("endpoint", help="The OpenSearch service endpoint")
-    parser.add_argument("index_name", help="The name of the OpenSearch index")
+    parser.add_argument("--bucket_name", help="The S3 bucket name where documents are stored")
+    parser.add_argument("--endpoint", help="The OpenSearch service endpoint")
+    parser.add_argument("--index_name", help="The name of the OpenSearch index")
     args = parser.parse_args()
     main(args.bucket_name, args.endpoint, args.index_name)
