@@ -50,11 +50,12 @@ Where:
 - **--index_name**: The index_name where to store the embeddings in the collection.
 
 The main.py script will:
-1. Download PDF files from the S3 bucket.
-2. Split them into chunks.
-3. Generate embeddings from the chunks.
-4. Create an index in the vector DB.
-5. Store these embeddings in the OpenSearch Vector DB.
+
+* Download PDF files from the S3 bucket.
+* Split them into chunks.
+* Generate embeddings from the chunks.
+* Create an index in the vector DB.
+* Store these embeddings in the OpenSearch Vector DB.
 
 
 ## Part 2:
