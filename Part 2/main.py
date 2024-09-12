@@ -107,6 +107,7 @@ def main():
         st.session_state.chat_history.append({"role": "user", "content": user_prompt})
         # Generate and display answer
         print(user_prompt)
+ 
         embed_question= get_embedding(user_prompt,bedrock_client)
         print(embed_question)
         sim_results = similarity_search(embed_question, index_name)

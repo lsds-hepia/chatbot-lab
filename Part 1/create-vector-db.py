@@ -2,30 +2,30 @@
 import boto3
 import botocore
 import time
+import argparse
 
 
 client = boto3.client('opensearchserverless')
 #service = 'aoss'
-Vector_store_name='test-nabil'
 
-def createEncryptionPolicy(client):
-    """Creates an encryption policy that matches all collections beginning with test"""
+def createEncryptionPolicy(client,policy_name, collection_name):
+    """Creates an encryption policy for the specified collection."""
     try:
         response = client.create_security_policy(
-            description='Encryption policy for test collections',
-            name='test-policy',
-            policy="""
-                {
-                    \"Rules\":[
-                        {
-                            \"ResourceType\":\"collection\",
-                            \"Resource\":[
-                                \"collection\/test*\"
+            description=f'Encryption policy for {collection_name}',
+            name=policy_name,
+            policy=f"""
+                {{
+                    \"Rules\": [
+                        {{
+                            \"ResourceType\": \"collection\",
+                            \"Resource\": [
+                                \"collection/{collection_name}\"
                             ]
-                        }
+                        }}
                     ],
-                    \"AWSOwnedKey\":true
-                }
+                    \"AWSOwnedKey\": true
+                }}
                 """,
             type='encryption'
         )
@@ -39,27 +39,27 @@ def createEncryptionPolicy(client):
             raise error
 
 
-def createNetworkPolicy(client):
-    """Creates a network policy that matches all collections beginning with test"""
+def createNetworkPolicy(client,policy_name,collection_name):
+    """Creates a network policy for the specified collection."""
     try:
         response = client.create_security_policy(
-            description='Network policy for Test collections',
-            name='test-policy',
-            policy="""
-                [{
-                    \"Description\":\"Public access for Test collection\",
-                    \"Rules\":[
-                        {
-                            \"ResourceType\":\"dashboard\",
-                            \"Resource\":[\"collection\/test*\"]
-                        },
-                        {
-                            \"ResourceType\":\"collection\",
-                            \"Resource\":[\"collection\/test*\"]
-                        }
+            description=f'Network policy for {collection_name}',
+            name=policy_name,
+            policy=f"""
+                [{{
+                    \"Description\": \"Public access for {collection_name}\",
+                    \"Rules\": [
+                        {{
+                            \"ResourceType\": \"dashboard\",
+                            \"Resource\": [\"collection/{collection_name}\"]                            
+                        }},
+                        {{
+                            \"ResourceType\": \"collection\",
+                            \"Resource\": [\"collection/{collection_name}\"]                            
+                        }}
                     ],
-                    \"AllowFromPublic\":true
-                }]
+                    \"AllowFromPublic\": true
+                }}]
                 """,
             type='network'
         )
@@ -73,65 +73,62 @@ def createNetworkPolicy(client):
             raise error
 
 
-def createAccessPolicy(client):
-    """Creates a data access policy that matches all collections beginning with test"""
+def createAccessPolicy(client, policy_name, collection_name, IAM_USER):
+    """Creates a data access policy for the specified collection."""
     try:
+        policy_content = f"""
+        [
+            {{
+                "Rules": [
+                    {{
+                        "Resource": ["collection/{collection_name}"],
+                        "Permission": [
+                            "aoss:CreateCollectionItems",
+                            "aoss:DeleteCollectionItems",
+                            "aoss:UpdateCollectionItems",
+                            "aoss:DescribeCollectionItems"
+                        ],
+                        "ResourceType": "collection"
+                    }},
+                    {{
+                        "Resource": ["index/{collection_name}/*"],
+                        "Permission": [
+                            "aoss:CreateIndex",
+                            "aoss:DeleteIndex",
+                            "aoss:UpdateIndex",
+                            "aoss:DescribeIndex",
+                            "aoss:ReadDocument",
+                            "aoss:WriteDocument"
+                        ],
+                        "ResourceType": "index"
+                    }}
+                ],
+                "Principal": ["arn:aws:iam::352909266144:user/{IAM_USER}"]
+            }}
+        ]
+        """
         response = client.create_access_policy(
-            description='Data access policy for Test collections',
-            name='test-policy',
-            policy="""
-                [{
-                    \"Rules\":[
-                        {
-                            \"Resource\":[
-                                \"index\/test*\/*\"
-                            ],
-                            \"Permission\":[
-                                \"aoss:CreateIndex\",
-                                \"aoss:DeleteIndex\",
-                                \"aoss:UpdateIndex\",
-                                \"aoss:DescribeIndex\",
-                                \"aoss:ReadDocument\",
-                                \"aoss:WriteDocument\"
-                            ],
-                            \"ResourceType\": \"index\"
-                        },
-                        {
-                            \"Resource\":[
-                                \"collection\/test*\"
-                            ],
-                            \"Permission\":[
-                                \"aoss:CreateCollectionItems\",
-                                \"aoss:DeleteCollectionItems\",
-                                \"aoss:UpdateCollectionItems\",
-                                \"aoss:DescribeCollectionItems\"
-                            ],
-                            \"ResourceType\": \"collection\"
-                        }
-                    ],
-                    \"Principal\":[
-                        \"arn:aws:iam::768034348959:user/AbirChebbi\"
-                    ]
-                }]
-                """,
+            description=f'Data access policy for {collection_name}',
+            name=policy_name,
+            policy=policy_content,
             type='data'
         )
         print('\nAccess policy created:')
         print(response)
     except botocore.exceptions.ClientError as error:
         if error.response['Error']['Code'] == 'ConflictException':
-            print(
-                '[ConflictException] An access policy with this name already exists.')
+            print('[ConflictException] An access policy with this name already exists.')
         else:
             raise error
+
         
 
         
-def waitForCollectionCreation(client):
+def waitForCollectionCreation(client,collection_name):
     """Waits for the collection to become active"""
-    time.sleep(40)
+    time.sleep(30)
     response = client.batch_get_collection(
-            names=['test1'])
+            names=[collection_name])
     print('\nCollection successfully created:')
     print(response["collectionDetails"])
     # Extract the collection endpoint from the response
@@ -140,16 +137,22 @@ def waitForCollectionCreation(client):
     return final_host
 
 
-def main():
-
-    createEncryptionPolicy(client)
-    createNetworkPolicy(client)
-    createAccessPolicy(client)
-    collection = client.create_collection(name=Vector_store_name,type='VECTORSEARCH')
-    ENDPOINT= waitForCollectionCreation(client)
+def main(collection_name,IAM_USER):
+    encryption_policy_name = f'{collection_name}-encryption-policy'
+    network_policy_name = f'{collection_name}-network-policy'
+    access_policy_name = f'{collection_name}-access-policy'
+    createEncryptionPolicy(client, encryption_policy_name, collection_name)
+    createNetworkPolicy(client, network_policy_name, collection_name)
+    createAccessPolicy(client, access_policy_name, collection_name,IAM_USER)
+    collection = client.create_collection(name=collection_name,type='VECTORSEARCH')
+    ENDPOINT= waitForCollectionCreation(client,collection_name)
 
     print("Collection created successfully:", collection)
     print("Collection ENDPOINT:", ENDPOINT)
 
 if __name__== "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Create collection")
+    parser.add_argument("collection_name", help="The name of the collection")
+    parser.add_argument("iam_user", help="The iam user")
+    args = parser.parse_args()
+    main(args.collection_name,args.iam_user)

@@ -8,41 +8,30 @@ from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_community.vectorstores import OpenSearchVectorSearch
 import uuid
 import json
+import argparse
 
 
 ##  Local directory for storing PDF files
 LOCAL_DIR = "pdfs" 
-index_name = "cloud_lecture"
+
 
 
 ## S3_client
 s3_client = boto3.client('s3')
-## Bucket name where documents are stored
-BUCKET_NAME = "cloud-lecture-2023"
 
 ## Bedrock client
 bedrock_client = boto3.client(service_name="bedrock-runtime")
 
 
 ## Configuration for AWS authentication and OpenSearch client
-credentials = boto3.Session().get_credentials()
+credentials = boto3.Session(profile_name='master-group-14').get_credentials()
 awsauth = AWSV4SignerAuth(credentials, 'us-east-1', 'aoss')
 
-## Vector DB endpoint
-host= 'j6phg34iv0f2rlvxwawd.us-east-1.aoss.amazonaws.com'
 
-## Opensearch Client
-OpenSearch_client = OpenSearch(
-    hosts=[{'host': host, 'port': 443}],
-    http_auth=awsauth,
-    use_ssl=True,
-    verify_certs=True,
-    connection_class=RequestsHttpConnection,
-    
-)
+
 
 ## Create Index in Opensearch
-def create_index(index_name):
+def create_index(client,index_name):
     indexBody = {
         "settings": {
             "index.knn": True
@@ -62,7 +51,7 @@ def create_index(index_name):
     }
 
     try:
-        create_response = OpenSearch_client.indices.create(index_name, body=indexBody)
+        create_response = client.indices.create(index_name, body=indexBody)
         print('\nCreating index:')
         print(create_response)
     except Exception as e:
@@ -101,6 +90,7 @@ def generate_embeddings(bedrock_client, chunks):
 
 # Store generated embeddings into an OpenSearch index.
 def store_embeddings(embeddings, texts, meta_data, host, awsauth, index_name):  
+    
     docsearch = OpenSearchVectorSearch.from_embeddings(
         embeddings,
         texts,
@@ -137,14 +127,25 @@ def generate_store_embeddings(bedrock_client, chunks,awsauth,index_name):
 
 
 ## main 
-def main():
+def main(bucket_name, endpoint,index_name):
 
-    download_documents(BUCKET_NAME,LOCAL_DIR)
+    ## Opensearch Client
+    OpenSearch_client = OpenSearch(
+        hosts=[{'host': endpoint, 'port': 443}],
+        http_auth=awsauth,
+        use_ssl=True,
+        verify_certs=True,
+        connection_class=RequestsHttpConnection,
+        
+    )
+
+    download_documents(bucket_name,LOCAL_DIR)
     loader= PyPDFDirectoryLoader(LOCAL_DIR)
     docs = loader.load()
     print(docs[1])
     chunks = split_text(docs, 1000, 100)
     print(chunks[1])
+    create_index(OpenSearch_client,index_name)
     embeddings= generate_embeddings(bedrock_client, chunks)
     print(embeddings[1])
     texts = [chunk.page_content for chunk in chunks]
@@ -152,7 +153,7 @@ def main():
     meta_data = [{'source': chunk.metadata['source'], 'page': chunk.metadata['page'] + 1} for chunk in chunks]
     print(embeddings[1])
     print(meta_data[1])
-    store_embeddings(embeddings, texts, meta_data ,host, awsauth,index_name)
+    store_embeddings(embeddings, texts, meta_data ,endpoint, awsauth,index_name)
 
 
    
@@ -163,4 +164,9 @@ def main():
 
 
 if __name__== "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Process PDF documents and store their embeddings.")
+    parser.add_argument("bucket_name", help="The S3 bucket name where documents are stored")
+    parser.add_argument("endpoint", help="The OpenSearch service endpoint")
+    parser.add_argument("index_name", help="The name of the OpenSearch index")
+    args = parser.parse_args()
+    main(args.bucket_name, args.endpoint, args.index_name)
