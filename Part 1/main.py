@@ -1,6 +1,6 @@
 import boto3
 import os
-from tqdm.auto import tqdm
+#from tqdm.auto import tqdm
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import BedrockEmbeddings
@@ -21,7 +21,7 @@ bedrock_client = boto3.client(service_name="bedrock-runtime")
 
 
 ## Configuration for AWS authentication and OpenSearch client
-credentials = boto3.Session(profile_name='master-group-14').get_credentials()
+credentials = boto3.Session().get_credentials()
 awsauth = AWSV4SignerAuth(credentials, 'us-east-1', 'aoss')
 
 
