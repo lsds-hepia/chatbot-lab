@@ -127,8 +127,8 @@ def main(endpoint, index_name):
 if __name__== "__main__":
     # Argument parsing
     parser = argparse.ArgumentParser(description='Configure endpoint and index name for the lecture chat application.')
-    parser.add_argument('endpoint', type=str, help='The endpoint for the OpenSearch service.')
-    parser.add_argument('index_name', type=str, help='The index name for storing embeddings.')
+    parser.add_argument('--endpoint', type=str, help='The endpoint for the OpenSearch service.')
+    parser.add_argument('--index_name', type=str, help='The index name for storing embeddings.')
     args = parser.parse_args()
     main(args.endpoint, args.index_name)
 
