@@ -1,17 +1,31 @@
 import boto3
 import streamlit as st
-## Bedrock
-from langchain.llms.bedrock import Bedrock
-## prompt and chain
-from langchain.chains import RetrievalQA
+
+
+
 from langchain_community.embeddings import BedrockEmbeddings
 from langchain_community.chat_models import BedrockChat
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
-from langchain import PromptTemplate
-import argparse
+from langchain_core.prompts import PromptTemplate
+import configparser
+
+def load_config():
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    return config
+
+config = load_config()
+
+aws_access_key_id = config.get('aws', 'aws_access_key_id')
+aws_secret_access_key = config.get('aws', 'aws_secret_access_key')
+region = config.get('aws', 'region')
+endpoint = config.get('opensearch', 'endpoint')
+index_name = config.get('opensearch', 'index_name')
 
 # Embeddings Client
-bedrock_client = boto3.client(service_name="bedrock-runtime")
+bedrock_client = boto3.client(service_name="bedrock-runtime", 
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key, region_name=region)
 
 # configuring streamlit page settings
 st.set_page_config(
@@ -29,7 +43,12 @@ st.title("Chat with your lecture")
 
 # OpenSearch Client
 def ospensearch_client(endpoint):
-    awsauth = AWSV4SignerAuth(boto3.Session().get_credentials(), 'us-east-1', 'aoss')
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=region
+    )
+    awsauth = AWSV4SignerAuth(session.get_credentials(), region, 'aoss')
     client = OpenSearch(
     hosts=[{'host': endpoint, 'port': 443}],
     http_auth=awsauth,
@@ -81,12 +100,12 @@ def prepare_prompt(question, context):
     return prompt_formatted_str
 
 def generate_answer(prompt):
-    model = BedrockChat(model_id="anthropic.claude-v2", model_kwargs={"temperature": 0.1})
+    model = BedrockChat(model_id="anthropic.claude-v2", model_kwargs={"temperature": 0.1}, client=bedrock_client)
     answer = model.invoke(prompt)
     return answer
 
 
-def main(endpoint, index_name):
+def main():
 
     oss_client= ospensearch_client(endpoint)
 
@@ -125,11 +144,6 @@ def main(endpoint, index_name):
                 st.markdown(message["content"])
 
 if __name__== "__main__":
-    # Argument parsing
-    parser = argparse.ArgumentParser(description='Configure endpoint and index name for the lecture chat application.')
-    parser.add_argument('--endpoint', type=str, help='The endpoint for the OpenSearch service.')
-    parser.add_argument('--index_name', type=str, help='The index name for storing embeddings.')
-    args = parser.parse_args()
-    main(args.endpoint, args.index_name)
+    main()
 
  
