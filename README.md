@@ -67,7 +67,7 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 1. Create a Key Pair: This key pair will be used for SSH access to your EC2 instance whe you need it.
 
 2. Create a Security Group: Define rules to allow the instance to be accessible externally. The security group should include the following rules:
-    - For inbound rules: you need to allow SSH traffic, HTTP/HTTPs trafic and open port 8501 for the server.
+    - For inbound rules: you need to allow SSH traffic, HTTP/HTTPs trafic and open port 8501 used by the applicstion.
     - Outbound Rules: Allow all traffic.
 
 * Prepare config.ini:
