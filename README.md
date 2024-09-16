@@ -86,7 +86,7 @@ In the `ec2.create_instance` we have the following parameters:
     This is the script: 
 
     ```yaml
-    script = f"""#!/bin/bash
+    f"""#!/bin/bash
     cat <<EOT > /home/ubuntu/chatbot-lab/Part\ 2/config.ini
     {config_content}
     EOT
@@ -94,6 +94,7 @@ In the `ec2.create_instance` we have the following parameters:
     ## Run the apllication 
     cd /home/ubuntu/chatbot-lab/Part\ 2
     streamlit run main.py 
+    """
 
     ````
 
