@@ -27,7 +27,7 @@ Create a vector database for storing embeddings by running:
 
 Where placeholders: 
 - **[Name_of_colletion]**: Name of the collection that you want to create to store embeddings.
-- **[YourIAM_user]** : For example for group 14 the iam_user is `master-group-14`
+- **[YourIAM_user]** : the IAM user is `CloudSys-group-XX`, with "XX" representing your group number.
 
 
 This script performs the following actions:
@@ -37,11 +37,11 @@ This script performs the following actions:
 * After the vector store is set up, the script retrieves and displays the store's endpoint for immediate use.
 
 ### Step 3: Vectorizing the PDF Files
-After setting up the S3 bucket and Vector Store, we could process PDF files to generate and store embeddings in the vector database.
+After setting up the S3 bucket and Vector DB, we could process PDF files to generate and store embeddings in the vector database.
 
 Run: 
 
-`python3 main.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name] --local_path [local_path]`
+`python3 vectorise-store.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name] --local_path [local_path]`
 
 Where placeholders: 
 
@@ -50,7 +50,7 @@ Where placeholders:
 - **[Index_name]**: The index_name where to store the embeddings in the collection.
 - **[local_path]**: local_path  
 
-The main.py script will:
+The vectorise-store.py script will:
 
 * Download PDF files from the S3 bucket.
 * Split them into chunks.
@@ -70,9 +70,7 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
     - For inbound rules: you need to allow SSH traffic, HTTP/HTTPs trafic and open port 8501 used by the application.
     - Outbound Rules: Allow all traffic.
 
-* Prepare config.ini:
-
-Ensure your config.ini file includes your AWS credentials (aws_access_key_id, aws_secret_access_key, region), with the region set to 'us-east-1'. Also, include the endpoint and index_name for the OpenSearch service established earlier.
+3. Prepare config.ini: Ensure your config.ini file includes your AWS credentials (aws_access_key_id, aws_secret_access_key, region), with the region set to 'us-east-1'. Also, include the endpoint and index_name for the OpenSearch service established earlier.
 
 ### Step 2: Launching the Instance
 
@@ -80,19 +78,19 @@ Utilize the provided create_instance.py script to deploy your EC2 instance with 
 
 In the `ec2.create_instance` we have the following parameters: 
 
-- ImageId: `ami-03a1012f7ddc87219`, this is a custom Amazon Machine Image (AMI) that contains all the configurations and dependencies required for the chatbot application.
+- ImageId: `ami-05747e7a13dac9d14`, this is a custom Amazon Machine Image (AMI) that contains all the configurations and dependencies required for the chatbot application.
 - UserData:  is used to run script after the instance starts. The script will put the credentials in the instance so that the instance can aceess other services in AWS, and the endpoint for the Vector DB, index name. Then the script will run the application.
 
     This is the script: 
 
     ```yaml
     f"""#!/bin/bash
-    cat <<EOT > /home/ubuntu/chatbot-lab/Part\ 2/config.ini
+    cat <<EOT > /home/ubuntu/chatbot-lab/Part2/config.ini
     {config_content}
     EOT
     source /home/ubuntu/chatbotlab/bin/activate
     ## Run the apllication 
-    cd /home/ubuntu/chatbot-lab/Part\ 2
+    cd /home/ubuntu/chatbot-lab/Part2
     streamlit run main.py 
     """
 
