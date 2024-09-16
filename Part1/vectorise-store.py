@@ -1,3 +1,5 @@
+# Creator: Abir Chebbi (abir.chebbi@hesge.ch)
+
 import boto3
 import os
 from langchain_community.document_loaders import PyPDFDirectoryLoader

@@ -1,6 +1,9 @@
+# Creator: Abir Chebbi (abir.chebbi@hesge.ch)
+
+
 import boto3
 
-BUCKET_NAME = 'cloud-lecture-2023'
+BUCKET_NAME = ''
 
 S3_CLIENT = boto3.client('s3')
 S3_RESOURCE = boto3.resource('s3')

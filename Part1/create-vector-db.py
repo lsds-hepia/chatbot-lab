@@ -1,4 +1,7 @@
+# Creator: Abir Chebbi (abir.chebbi@hesge.ch)
 ## Source: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-sdk.html
+
+
 import boto3
 import botocore
 import time
