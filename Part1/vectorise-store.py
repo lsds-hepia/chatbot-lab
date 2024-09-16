@@ -1,13 +1,10 @@
 import boto3
 import os
-#from tqdm.auto import tqdm
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import BedrockEmbeddings
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_community.vectorstores import OpenSearchVectorSearch
-import uuid
-import json
 import argparse
 
 
@@ -139,18 +136,19 @@ def main(bucket_name, endpoint,index_name, local_path):
     download_documents(bucket_name,local_path)
     loader= PyPDFDirectoryLoader(local_path)
     docs = loader.load()
-    print(docs[1])
+    print('Start chunking')
     chunks = split_text(docs, 1000, 100)
     print(chunks[1])
     create_index(OpenSearch_client,index_name)
+    print('Start vectorising')
     embeddings= generate_embeddings(bedrock_client, chunks)
     print(embeddings[1])
     texts = [chunk.page_content for chunk in chunks]
      # Prepare metadata for each chunk
     meta_data = [{'source': chunk.metadata['source'], 'page': chunk.metadata['page'] + 1} for chunk in chunks]
-    print(embeddings[1])
-    print(meta_data[1])
+    print('Start storing')
     store_embeddings(embeddings, texts, meta_data ,endpoint, awsauth,index_name)
+    print('End storing')
 
 
    
