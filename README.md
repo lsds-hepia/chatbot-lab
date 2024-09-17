@@ -38,14 +38,14 @@ This script performs the following actions:
 
 ### Step 3: Vectorizing the PDF Files
 
+After setting up the S3 bucket and Vector DB, we could process PDF files to generate and store embeddings in the vector database.
+
 Start by requesting access to the following models on the AWS Bedrock service:
 
 - Titan Embedding v1
 - Claude v2
 
-After setting up the S3 bucket and Vector DB, we could process PDF files to generate and store embeddings in the vector database.
-
-Run: 
+Then, run: 
 
 `python3 vectorise-store.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name] --local_path [local_path]`
 
