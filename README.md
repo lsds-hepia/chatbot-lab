@@ -40,8 +40,8 @@ This script performs the following actions:
 
 Start by requesting access to the following models on the AWS Bedrock service:
 
-    - Titan Embedding v1
-    - Claude v2
+- Titan Embedding v1
+- Claude v2
 
 After setting up the S3 bucket and Vector DB, we could process PDF files to generate and store embeddings in the vector database.
 
