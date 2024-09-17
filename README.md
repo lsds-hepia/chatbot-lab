@@ -37,6 +37,11 @@ This script performs the following actions:
 * After the vector store is set up, the script retrieves and displays the store's endpoint for immediate use.
 
 ### Step 3: Vectorizing the PDF Files
+
+Before starting vectorizing, please go to AWS bedrock service and request the following models:
+* Titan Embedding v1
+* Claude v2
+
 After setting up the S3 bucket and Vector DB, we could process PDF files to generate and store embeddings in the vector database.
 
 Run: 
