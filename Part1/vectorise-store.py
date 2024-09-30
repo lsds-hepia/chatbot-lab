@@ -9,9 +9,6 @@ from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_community.vectorstores import OpenSearchVectorSearch
 import argparse
 
-
-
-
 ## S3_client
 s3_client = boto3.client('s3')
 
@@ -22,8 +19,6 @@ bedrock_client = boto3.client(service_name="bedrock-runtime")
 ## Configuration for AWS authentication and OpenSearch client
 credentials = boto3.Session().get_credentials()
 awsauth = AWSV4SignerAuth(credentials, 'us-east-1', 'aoss')
-
-
 
 
 ## Create Index in Opensearch
@@ -151,13 +146,6 @@ def main(bucket_name, endpoint,index_name, local_path):
     print('Start storing')
     store_embeddings(embeddings, texts, meta_data ,endpoint, awsauth,index_name)
     print('End storing')
-
-
-   
-
-  
-
-
 
 
 if __name__== "__main__":
