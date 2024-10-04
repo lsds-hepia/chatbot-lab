@@ -77,7 +77,7 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 
 3.Create a `config.ini` file under Part2 folder with the following content:
 
-    ``` ini
+
     [aws]
     aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
     aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY
@@ -85,7 +85,7 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 
     [opensearch]
     endpoint = YOUR_OPENSEARCH_ENDPOINT
-    index_name = YOUR_INDEX_NAME ```
+    index_name = YOUR_INDEX_NAME 
 
 
 ### Step 2: Launching the Instance
@@ -114,7 +114,7 @@ In the `ec2.create_instance` we have the following parameters:
 
 Run the following command to create your instance:
 
-`python3 create_instance.py --ami_id `ami-08919ae65ab65be94` --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID]`
+`python3 create_instance.py --ami_id "ami-08919ae65ab65be94" --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID]`
 
 Where: 
 
