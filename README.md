@@ -83,7 +83,7 @@ Use the provided create_instance.py script to deploy your EC2 instance with the 
 
 In the `ec2.create_instance` we have the following parameters: 
 
-- ImageId: `ami-05747e7a13dac9d14`, this is a custom Amazon Machine Image (AMI) that contains all the configurations and dependencies required for the chatbot application.
+- ImageId: `ami-08919ae65ab65be94`, this is a custom Amazon Machine Image (AMI) that contains all the configurations and dependencies required for the chatbot application.
 - UserData:  is used to run script after the instance starts. The script will put the credentials in the instance so that the instance can aceess other services in AWS, the endpoint of the Vector DB, and the index name. Then the script will run the application.
 
     This is the script: 
@@ -96,14 +96,19 @@ In the `ec2.create_instance` we have the following parameters:
     source /home/ubuntu/chatbotlab/bin/activate
     ## Run the apllication 
     cd /home/ubuntu/chatbot-lab/Part2
-    streamlit run main.py 
+    streamlit run chatbot.py 
     """
 
     ````
 
 Run the following command to create your instance:
 
-`python3 create_instance.py`
+`python3 create_instance.py --ami_id `ami-08919ae65ab65be94` --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID]`
+
+Where: 
+
+- **[KeyPairName]**: The name of the key_pair created earlier.
+- **[SecurityGroupID]**: The id of the security group created earlier.
 
 ## Step 3: Accessing the app:
 
