@@ -75,7 +75,18 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
     - For inbound rules: you need to allow SSH traffic, HTTP/HTTPs traffic and open port 8501 used by the application.
     - Outbound Rules: Allow all traffic.
 
-3. Prepare config.ini: Ensure your config.ini file includes your AWS credentials (aws_access_key_id, aws_secret_access_key, region), with the region set to 'us-east-1'. Also, include the endpoint and index_name for the OpenSearch service established earlier.
+3.Create a `config.ini` file under Part2 folder with the following content:
+
+    ``` ini
+    [aws]
+    aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
+    aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY
+    region = us-east-1
+
+    [opensearch]
+    endpoint = YOUR_OPENSEARCH_ENDPOINT
+    index_name = YOUR_INDEX_NAME ```
+
 
 ### Step 2: Launching the Instance
 
