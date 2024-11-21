@@ -1,6 +1,6 @@
 # chatbot-lab
 
-## Set up environment
+## Set up environment:
 1. AWS CLI: Ensure AWS CLI is installed and configured on your laptop(refer to the setup guide provided in Session 1).
 2. Ensure python is installed: python 3.8 or higher.
 3. Install required python libraries listed in the 'requirements.txt': 
