@@ -1,9 +1,10 @@
-# chatbot-lab
+# chatbot lab
 
 ## Set up environment:
 1. AWS CLI: Ensure AWS CLI is installed and configured on your laptop(refer to the setup guide provided in Session 1).
 2. Ensure python is installed: python 3.8 or higher.
 3. Install required python libraries listed in the 'requirements.txt': 
+
 
 `pip3 install -r requirements.txt`
 
@@ -35,7 +36,7 @@ This script performs the following actions:
 * Creates a vector store with the name collection entered as argument.
 * After the vector store is set up, the script retrieves and displays the store's endpoint.
 
-### Step 3: Vectorizing the PDF Files
+### Step 3: Vectorizing the PDF Files: 
 
 After setting up the S3 bucket and Vector DB, we could process PDF files to generate and store embeddings in the vector database.
 
@@ -121,6 +122,6 @@ Where:
 - **[KeyPairName]**: The name of the key_pair created earlier.
 - **[SecurityGroupID]**: The id of the security group created earlier.
 
-## Step 3: Accessing the app:
+## Step 3: Accessing the application
 
 Once the app starts, navigate to this URL `http://[public_ip_adress_of_yourVM]:8501` in your web browser to start interacting with your chatbot
