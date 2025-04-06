@@ -1,11 +1,6 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
-
-
 import boto3
 import streamlit as st
-
-
-
 from langchain_community.embeddings import BedrockEmbeddings
 from langchain_community.chat_models import BedrockChat
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
