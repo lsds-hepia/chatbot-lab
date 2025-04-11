@@ -50,9 +50,9 @@ Start by requesting access to the following models on the AWS Bedrock service:
 - Claude v2
 
 To do so:
-- Go to the bedrock AWS Amazon service in your AWS portal
-- Go to the BedRock configurations option in the left menu at the bottom of the page
-- Check that the access is granted for itan Embedding v1 and Claude v2
+- Go to the **bedrock AWS Amazon** service in your AWS portal
+- Go to the **BedRock configurations** option in the left menu at the bottom of the page
+- Check that the access is granted for **Titan Embedding v1** and **Claude v2**
 
 Then, run: 
 
