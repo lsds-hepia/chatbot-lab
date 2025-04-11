@@ -1,0 +1,37 @@
+---
+- name: Create EC2 instance
+  hosts: localhost
+  vars_files:
+    - config.yml
+  gather_facts: false
+  become: False
+  vars:
+    #instance_type: t4g.micro
+    instance_type: t2.micro
+    instance_count: 1
+
+  tasks:
+    - name: EC2 instances creation
+      amazon.aws.ec2_instance:
+        name: "{{ instance_name }}"
+        key_name: "{{ key_name }}"
+        image_id: "{{ ami_id }}"
+        instance_type: "{{ instance_type }}"
+        network:
+          assign_public_ip: true
+        security_group: "{{ security_group }}"
+        count: "{{ instance_count }}"
+        wait: true
+      register: ec2
+
+    - name: Save IP addreesses in "instance_ip.ini" file
+      copy:
+        content: "[my_hosts]\n{{ ec2.instances | json_query('[].public_ip_address') | join('\n') }}"
+        dest: instance_ip.ini
+
+    # We need  instances ID to delete them at the end of the exercise.
+    - name: Saving the instances ID in the instance_ids.txt file
+      copy:
+        content: "{{ ec2.instances | map(attribute='instance_id') | join('\n') }}"
+        dest: ./instance_ids.txt
+

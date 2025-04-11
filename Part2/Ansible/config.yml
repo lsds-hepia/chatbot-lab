@@ -1,0 +1,4 @@
+key_name: "abir"
+ami_id: "ami-08919ae65ab65be94"
+security_group: "gr14-lab1"
+instance_name: "chatbot"

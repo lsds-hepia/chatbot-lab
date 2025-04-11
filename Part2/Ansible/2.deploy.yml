@@ -1,0 +1,28 @@
+---
+- name: Run Streamlit Application
+  hosts: my_hosts
+  gather_facts: no
+  become: false
+  vars:
+    virtual_env_path: /home/ubuntu/chatbotlab/bin/activate
+    application_path: /home/ubuntu/chatbot-lab/Part2
+    config_template: ./../config.ini
+
+  tasks:
+
+    - name: copy the config.ini file
+      copy:
+        src: "{{ config_template }}"
+        dest: "{{ application_path }}/config.ini"
+      become_user: ubuntu  
+      notify: streamlit
+      tags: config
+
+
+    - name: Source the virtual environment and run Streamlit
+      shell: source {{ virtual_env_path }} && cd {{ application_path }} && streamlit run chatbot.py & 
+      args:
+        executable: /bin/bash
+
+   
+  

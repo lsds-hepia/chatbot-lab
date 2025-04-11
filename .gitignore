@@ -1,1 +1,5 @@
 config.ini
+Ansible/abir.pem
+Ansible/instance_ids.txt
+Ansible/instance_ip.ini
+
