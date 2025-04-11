@@ -106,7 +106,7 @@ def createAccessPolicy(client, policy_name, collection_name, IAM_USER):
                         "ResourceType": "index"
                     }}
                 ],
-                "Principal": ["arn:aws:iam::352909266144:user/{IAM_USER}"]
+                "Principal": ["arn:aws:iam::768034348959:user/{IAM_USER}"]
             }}
         ]
         """
