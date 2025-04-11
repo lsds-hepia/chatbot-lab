@@ -24,9 +24,6 @@ Where placeholders:
 
 
 ### Step 2: Vector Store Creation
-Go to the Part2 folder: `cd Part2`
-
-Install required python libraries listed in the 'requirements.txt': `pip3 install -r requirements.txt`
 
 Create a vector database for storing embeddings by running: 
 
@@ -74,6 +71,11 @@ The vectorise-store.py script will:
 ## Part 2:
 
 ### Step 1: Preparation
+
+Go to the Part1 folder: `cd Part2`
+
+Install required python libraries listed in the 'requirements.txt': `pip3 install -r requirements.txt`
+
 Before deploying the chatbot on an EC2 instance, complete the following preliminary steps:
 
 1. Create a Key Pair: This key pair will be used for SSH access to your EC2 instance.
