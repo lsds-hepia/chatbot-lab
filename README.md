@@ -4,12 +4,10 @@
 1. AWS CLI: Ensure AWS CLI is installed and configured on your laptop(refer to the setup guide provided in Session 1).
 2. Ensure python is installed: python 3.8 or higher.
 
-
-
-
 ## Part 1: 
 
 ### Step 1: Object storage Creation
+
 Go to the Part1 folder: `cd Part1`
 
 Install required python libraries listed in the 'requirements.txt': `pip3 install -r requirements.txt`
@@ -31,11 +29,12 @@ Create a vector database for storing embeddings by running:
 
 Where: 
 - **[Name_of_colletion]**: Name of the collection that you want to create.
-- **[YourIAM_user]** : the IAM user is `CloudSys-group-XX`, with "XX" representing your group number.
+- **[YourIAM_user]** : the IAM user of your account.
 - **[YourAccount_ID]** : the ACCOUNT ID of your account.
 
+You will find YourIAM_iser and YourAccount_ID when you click on your account ID in the top right-hand corner of the AWS Amazon portal.
 
-This script performs the following actions:
+The script performs the following actions:
 
 * Sets up encryption, network, and data access policies for the collection.
 * Creates a vector store with the name collection entered as argument.
@@ -49,6 +48,11 @@ Start by requesting access to the following models on the AWS Bedrock service:
 
 - Titan Embedding v1
 - Claude v2
+
+To do so:
+- Go to the bedrock AWS Amazon service in your AWS portal
+- Go to the BedRock configurations option in the left menu at the bottom of the page
+- Check that the access is granted for itan Embedding v1 and Claude v2
 
 Then, run: 
 
