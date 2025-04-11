@@ -3,15 +3,17 @@
 ## Set up environment:
 1. AWS CLI: Ensure AWS CLI is installed and configured on your laptop(refer to the setup guide provided in Session 1).
 2. Ensure python is installed: python 3.8 or higher.
-3. Install required python libraries listed in the 'requirements.txt': 
 
 
-`pip3 install -r requirements.txt`
 
 
 ## Part 1: 
 
 ### Step 1: Object storage Creation
+Go to the Part1 folder: `cd Part1`
+
+Install required python libraries listed in the 'requirements.txt': `pip3 install -r requirements.txt`
+
 Create an S3 bucket and upload a few PDF files by running: 
 
 `python3 create-S3-and-put-docs.py --bucket_name [YourBucketName] --local_path [PathToYourPDFFiles]`
@@ -22,6 +24,10 @@ Where placeholders:
 
 
 ### Step 2: Vector Store Creation
+Go to the Part2 folder: `cd Part2`
+
+Install required python libraries listed in the 'requirements.txt': `pip3 install -r requirements.txt`
+
 Create a vector database for storing embeddings by running: 
 
 `python3 create-vector-db.py --collection_name [Name_of_colletion] --iam_user [YourIAM_user]`
