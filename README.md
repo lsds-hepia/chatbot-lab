@@ -33,6 +33,7 @@ Where:
 - **[Name_of_colletion]**: Name of the collection that you want to create.
 - **[YourIAM_user]** : the IAM user is `CloudSys-group-XX`, with "XX" representing your group number.
 
+
 This script performs the following actions:
 
 * Sets up encryption, network, and data access policies for the collection.

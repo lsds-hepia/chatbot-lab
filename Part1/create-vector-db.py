@@ -76,7 +76,7 @@ def createNetworkPolicy(client,policy_name,collection_name):
             raise error
 
 
-def createAccessPolicy(client, policy_name, collection_name, IAM_USER):
+def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID):
     """Creates a data access policy for the specified collection."""
     try:
         policy_content = f"""
@@ -106,7 +106,7 @@ def createAccessPolicy(client, policy_name, collection_name, IAM_USER):
                         "ResourceType": "index"
                     }}
                 ],
-                "Principal": ["arn:aws:iam::768034348959:user/{IAM_USER}"]
+                "Principal": ["arn:aws:iam::{ACCOUNT_ID}:user/{IAM_USER}"]
             }}
         ]
         """
@@ -140,13 +140,13 @@ def waitForCollectionCreation(client,collection_name):
     return final_host
 
 
-def main(collection_name,IAM_USER):
+def main(collection_name,IAM_USER,ACCOUNT_ID):
     encryption_policy_name = f'{collection_name}-encryption-policy'
     network_policy_name = f'{collection_name}-network-policy'
     access_policy_name = f'{collection_name}-access-policy'
     createEncryptionPolicy(client, encryption_policy_name, collection_name)
     createNetworkPolicy(client, network_policy_name, collection_name)
-    createAccessPolicy(client, access_policy_name, collection_name,IAM_USER)
+    createAccessPolicy(client, access_policy_name, collection_name,IAM_USER,ACCOUNT_ID)
     collection = client.create_collection(name=collection_name,type='VECTORSEARCH')
     ENDPOINT= waitForCollectionCreation(client,collection_name)
 
@@ -157,5 +157,6 @@ if __name__== "__main__":
     parser = argparse.ArgumentParser(description="Create collection")
     parser.add_argument("--collection_name", help="The name of the collection")
     parser.add_argument("--iam_user", help="The iam user")
+    parser.add_argument("--account_id", help="The account id")
     args = parser.parse_args()
-    main(args.collection_name,args.iam_user)
+    main(args.collection_name,args.iam_user,args.account_id)
