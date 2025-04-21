@@ -26,7 +26,7 @@ Where placeholders:
 
 Create a vector database for storing embeddings by running: 
 
-`python3 create-vector-db.py --collection_name [Name_of_colletion] --iam_user [YourIAM_user] --acount_id [YourAccount_ID]`
+`python3 create-vector-db.py --collection_name [Name_of_colletion] --iam_user [YourIAM_user] --account_id [YourAccount_ID]`
 
 Where: 
 - **[Name_of_colletion]**: Name of the collection that you want to create.
