@@ -4,7 +4,7 @@ import boto3
 import os
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import BedrockEmbeddings
+from langchain_aws import BedrockEmbeddings
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_community.vectorstores import OpenSearchVectorSearch
 import argparse
@@ -12,13 +12,15 @@ import argparse
 ## S3_client
 s3_client = boto3.client('s3')
 
-## Bedrock client
-bedrock_client = boto3.client(service_name="bedrock-runtime")
+## Bedrock client - use the same region as configured
+session = boto3.Session()
+region = session.region_name or 'us-east-1'  # fallback to us-east-1 if region not configured
+bedrock_client = boto3.client(service_name="bedrock-runtime", region_name=region)
 
 
 ## Configuration for AWS authentication and OpenSearch client
-credentials = boto3.Session().get_credentials()
-awsauth = AWSV4SignerAuth(credentials, 'us-east-1', 'aoss')
+credentials = session.get_credentials()
+awsauth = AWSV4SignerAuth(credentials, region, 'aoss')
 
 
 ## Create Index in Opensearch
@@ -74,7 +76,26 @@ def split_text(docs, chunk_size, chunk_overlap):
  
 ## Generate embeddings 
 def generate_embeddings(bedrock_client, chunks):
-    embeddings_model = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1", client=bedrock_client)
+    # Try multiple model IDs in order of preference
+    model_ids = [
+        "amazon.titan-embed-text-v2:0",    # Latest version
+        "amazon.titan-embed-text-v1",      # Previous version
+        "cohere.embed-english-v3"          # Alternative
+    ]
+    
+    embeddings_model = None
+    for model_id in model_ids:
+        try:
+            embeddings_model = BedrockEmbeddings(model_id=model_id, client=bedrock_client)
+            print(f"Using embedding model: {model_id}")
+            break
+        except Exception as e:
+            print(f"Model {model_id} not available: {e}")
+            continue
+    
+    if embeddings_model is None:
+        raise ValueError("No embedding model available. Please check your Bedrock model access.")
+    
     chunks_list=[chunk.page_content for chunk in chunks]
     embeddings = embeddings_model.embed_documents(chunks_list)
     return embeddings
@@ -92,15 +113,36 @@ def store_embeddings(embeddings, texts, meta_data, host, awsauth, index_name):
         verify_certs=True,
         connection_class=RequestsHttpConnection,
         index_name=index_name,
-        bulk_size=1000
+        bulk_size=100,  # Reduced bulk size to avoid timeouts
+        timeout=120,    # Increased timeout to 2 minutes
+        max_chunk_bytes=10485760  # 10MB max chunk size
 )
 
     return docsearch
 
 
 # Func to do both generating and storing embeddings
-def generate_store_embeddings(bedrock_client, chunks,awsauth,index_name):
-    embeddings_model = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1", client=bedrock_client)
+def generate_store_embeddings(bedrock_client, chunks, host, awsauth, index_name):
+    # Try multiple model IDs in order of preference
+    model_ids = [
+        "amazon.titan-embed-text-v2:0",    # Latest version
+        "amazon.titan-embed-text-v1",      # Previous version
+        "cohere.embed-english-v3"          # Alternative
+    ]
+    
+    embeddings_model = None
+    for model_id in model_ids:
+        try:
+            embeddings_model = BedrockEmbeddings(model_id=model_id, client=bedrock_client)
+            print(f"Using embedding model: {model_id}")
+            break
+        except Exception as e:
+            print(f"Model {model_id} not available: {e}")
+            continue
+    
+    if embeddings_model is None:
+        raise ValueError("No embedding model available. Please check your Bedrock model access.")
+    
     docsearch = OpenSearchVectorSearch.from_documents(
         chunks,
         embeddings_model,
@@ -110,7 +152,9 @@ def generate_store_embeddings(bedrock_client, chunks,awsauth,index_name):
         verify_certs=True,
         connection_class=RequestsHttpConnection,
         index_name=index_name,
-        bulk_size=1000
+        bulk_size=100,  # Reduced bulk size to avoid timeouts
+        timeout=120,    # Increased timeout to 2 minutes
+        max_chunk_bytes=10485760  # 10MB max chunk size
 )
 
     return docsearch
@@ -127,7 +171,9 @@ def main(bucket_name, endpoint,index_name, local_path):
         use_ssl=True,
         verify_certs=True,
         connection_class=RequestsHttpConnection,
-        
+        timeout=120,    # 2 minute timeout
+        max_retries=3,  # Retry failed requests
+        retry_on_timeout=True
     )
 
     download_documents(bucket_name,local_path)
@@ -144,8 +190,18 @@ def main(bucket_name, endpoint,index_name, local_path):
      # Prepare metadata for each chunk
     meta_data = [{'source': chunk.metadata['source'], 'page': chunk.metadata['page'] + 1} for chunk in chunks]
     print('Start storing')
-    store_embeddings(embeddings, texts, meta_data ,endpoint, awsauth,index_name)
-    print('End storing')
+    print(f"Storing {len(embeddings)} embeddings in batches...")
+    
+    try:
+        store_embeddings(embeddings, texts, meta_data, endpoint, awsauth, index_name)
+        print('End storing - Success!')
+    except Exception as e:
+        print(f"Error storing embeddings: {e}")
+        print("You may need to:")
+        print("1. Check your OpenSearch cluster is active and accessible")
+        print("2. Verify your network policies allow access")
+        print("3. Try reducing the batch size further")
+        raise
 
 
 if __name__== "__main__":

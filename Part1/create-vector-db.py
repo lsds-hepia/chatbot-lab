@@ -129,15 +129,33 @@ def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID
         
 def waitForCollectionCreation(client,collection_name):
     """Waits for the collection to become active"""
-    time.sleep(30)
-    response = client.batch_get_collection(
-            names=[collection_name])
-    print('\nCollection successfully created:')
-    print(response["collectionDetails"])
-    # Extract the collection endpoint from the response
-    host = (response['collectionDetails'][0]['collectionEndpoint'])
-    final_host = host.replace("https://", "")
-    return final_host
+    max_retries = 20  # Maximum number of retries (10 minutes with 30s intervals)
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        time.sleep(30)
+        response = client.batch_get_collection(names=[collection_name])
+        collection_details = response["collectionDetails"][0]
+        
+        print(f'\nCollection status check {retry_count + 1}:')
+        print(f'Status: {collection_details.get("status", "UNKNOWN")}')
+        
+        if collection_details.get("status") == "ACTIVE":
+            print('\nCollection successfully created:')
+            print(collection_details)
+            
+            # Check if collectionEndpoint exists
+            if 'collectionEndpoint' in collection_details:
+                host = collection_details['collectionEndpoint']
+                final_host = host.replace("https://", "")
+                return final_host
+            else:
+                print("Warning: Collection is ACTIVE but endpoint not yet available")
+        
+        retry_count += 1
+        print(f"Collection still creating... waiting 30 more seconds ({retry_count}/{max_retries})")
+    
+    raise Exception(f"Collection did not become active within {max_retries * 30} seconds")
 
 
 def main(collection_name,IAM_USER,ACCOUNT_ID):
