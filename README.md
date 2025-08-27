@@ -2,7 +2,6 @@
 
 ## Set up environment:
 1. Use your credentials to create an Ubuntu 24.04 specific VM on the AWS Amazon portal 
-2. AWS CLI: Ensure AWS CLI is installed and configured on the VM you just created (refer to the setup guide provided in Session 1).
 3. Ensure python is installed: python 3.8 or higher.
 
 ## Part 1: 
@@ -50,6 +49,8 @@ Start by requesting access to the following models on the AWS Bedrock service:
 - Titan Embedding v1
 - Claude v2
 
+- JSW These have changed... Claude v4?? Takes some time...
+
 To do so:
 - Go to the **bedrock AWS Amazon** service in your AWS portal
 - Go to the **BedRock configurations** option in the left menu at the bottom of the page
@@ -64,7 +65,7 @@ Where:
 - **[YourBucketName]**: The name of the S3 bucket containing the PDF files.
 - **[YourVectorDBEndpoint]**: Endpoint of the vector database.
 - **[Index_name]**: The index_name where to store the embeddings in the collection.
-- **[local_path]**: local_path  
+- **[local_path]**: local_path  JSW... what is this local path for???
 
 The vectorise-store.py script will:
 
