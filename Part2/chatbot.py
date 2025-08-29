@@ -1,7 +1,7 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
 import boto3
 import streamlit as st
-from langchain_community.embeddings import BedrockEmbeddings
+from langchain_aws import BedrockEmbeddings
 from langchain_community.chat_models import BedrockChat
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_core.prompts import PromptTemplate
@@ -57,7 +57,26 @@ def ospensearch_client(endpoint):
     return client
 
 def get_embedding(question, bedrock_client):
-    embeddings_model = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1", client=bedrock_client)
+    # Try multiple model IDs in order of preference (same as vectorization script)
+    model_ids = [
+        "amazon.titan-embed-text-v2:0",    # Latest version
+        "amazon.titan-embed-text-v1",      # Previous version  
+        "cohere.embed-english-v3"          # Alternative
+    ]
+    
+    embeddings_model = None
+    for model_id in model_ids:
+        try:
+            embeddings_model = BedrockEmbeddings(model_id=model_id, client=bedrock_client)
+            print(f"Using embedding model: {model_id}")
+            break
+        except Exception as e:
+            print(f"Model {model_id} not available: {e}")
+            continue
+    
+    if embeddings_model is None:
+        raise ValueError("No embedding model available. Please check your Bedrock model access.")
+    
     embedding = embeddings_model.embed_query(question)
     return embedding
 
