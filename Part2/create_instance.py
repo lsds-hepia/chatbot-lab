@@ -20,10 +20,9 @@ def create_instance(ami_id, key_pair_name, security_group_id):
     cat <<EOT > /home/ubuntu/chatbot-lab/Part2/config.ini
     {config_content}
     EOT
-    ## source /home/ubuntu/chatbotlab/bin/activate
+    source /home/ubuntu/chatbotlab/bin/activate
     ## Run the application 
     cd /home/ubuntu/chatbot-lab/Part2
-    source ./bin/activate
     streamlit run chatbot.py 
     """
     encoded_script = base64.b64encode(script.encode()).decode('utf-8')
