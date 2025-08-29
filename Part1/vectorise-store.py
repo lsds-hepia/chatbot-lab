@@ -33,7 +33,7 @@ def create_index(client,index_name):
             "properties": {
                 "vector_field": {
                     "type": "knn_vector",
-                    "dimension": 1536,
+                    "dimension": 1024,  # Updated to match actual embedding dimension
                     "method": {
                         "engine": "faiss",
                         "name": "hnsw"
@@ -98,6 +98,14 @@ def generate_embeddings(bedrock_client, chunks):
     
     chunks_list=[chunk.page_content for chunk in chunks]
     embeddings = embeddings_model.embed_documents(chunks_list)
+    
+    # Debug: Print actual embedding dimensions
+    if embeddings:
+        actual_dimension = len(embeddings[0])
+        print(f"Actual embedding dimension: {actual_dimension}")
+        if actual_dimension != 1024:
+            print(f"WARNING: Embedding dimension ({actual_dimension}) doesn't match index dimension (1024)")
+    
     return embeddings
 
 # Store generated embeddings into an OpenSearch index.
