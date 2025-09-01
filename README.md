@@ -1,8 +1,10 @@
 # chatbot lab
 
 ## Set up environment:
-1. Use your credentials to create an Ubuntu 24.04 specific VM on the AWS Amazon portal 
-3. Ensure python is installed: python 3.8 or higher.
+1. Run this lab on your own device
+2. AWS CLI: Ensure AWS CLI is installed and configured (Ensure region set to 'us-east-1').
+3. Use venv or conda to install dependencies (Ensure to have python version 3.8 or higher)
+
 
 ## Part 1: 
 
@@ -44,12 +46,11 @@ The script performs the following actions:
 
 After setting up the S3 bucket and Vector DB, we could process PDF files to generate and store embeddings in the vector database.
 
-Start by requesting access to the following models on the AWS Bedrock service:
+Start by requesting access to the following models on the AWS Bedrock service(Through the aws web interface):
 
-- Titan Embedding v1
-- Claude v2
+- Titan Text Embeddings V2
+- Claude v2.1
 
-- JSW These have changed... Claude v4?? Takes some time...
 
 To do so:
 - Go to the **bedrock AWS Amazon** service in your AWS portal
@@ -65,7 +66,7 @@ Where:
 - **[YourBucketName]**: The name of the S3 bucket containing the PDF files.
 - **[YourVectorDBEndpoint]**: Endpoint of the vector database.
 - **[Index_name]**: The index_name where to store the embeddings in the collection.
-- **[local_path]**: local_path  JSW... what is this local path for???
+- **[local_path]**: local_path 
 
 The vectorise-store.py script will:
 
@@ -93,7 +94,6 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
     - Outbound Rules: Allow all traffic.
 
 3.Create a `config.ini` file under Part2 folder with the following content:
-
 
     [aws]
     aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
