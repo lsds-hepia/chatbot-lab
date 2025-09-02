@@ -21,7 +21,12 @@ bedrock_client = boto3.client(service_name="bedrock-runtime", region_name=region
 ## Configuration for AWS authentication and OpenSearch client
 credentials = session.get_credentials()
 awsauth = AWSV4SignerAuth(credentials, region, 'aoss')
-
+## Embedding model IDs 
+model_ids = [
+        "amazon.titan-embed-text-v2:0",    # Latest version
+        "amazon.titan-embed-text-v1",      # Previous version
+        "cohere.embed-english-v3"          # Alternative
+    ]
 
 ## Create Index in Opensearch
 def create_index(client,index_name):
@@ -76,12 +81,6 @@ def split_text(docs, chunk_size, chunk_overlap):
  
 ## Generate embeddings 
 def generate_embeddings(bedrock_client, chunks):
-    # Try multiple model IDs in order of preference
-    model_ids = [
-        "amazon.titan-embed-text-v2:0",    # Latest version
-        "amazon.titan-embed-text-v1",      # Previous version
-        "cohere.embed-english-v3"          # Alternative
-    ]
     
     embeddings_model = None
     for model_id in model_ids:
@@ -131,13 +130,7 @@ def store_embeddings(embeddings, texts, meta_data, host, awsauth, index_name):
 
 # Func to do both generating and storing embeddings
 def generate_store_embeddings(bedrock_client, chunks, host, awsauth, index_name):
-    # Try multiple model IDs in order of preference
-    model_ids = [
-        "amazon.titan-embed-text-v2:0",    # Latest version
-        "amazon.titan-embed-text-v1",      # Previous version
-        "cohere.embed-english-v3"          # Alternative
-    ]
-    
+   
     embeddings_model = None
     for model_id in model_ids:
         try:
