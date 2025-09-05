@@ -78,38 +78,55 @@ def createNetworkPolicy(client,policy_name,collection_name):
 
 def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID):
     """Creates a data access policy for the specified collection."""
+    
+    # Debug: Print the values being used
+    print(f"Debug - IAM_USER: {IAM_USER}")
+    print(f"Debug - ACCOUNT_ID: {ACCOUNT_ID}")
+    
+    # Build the principal ARN
+    user_arn = f"arn:aws:iam::{ACCOUNT_ID}:user/{IAM_USER}"
+    print(f"Debug - User ARN: {user_arn}")
+    
     try:
-        policy_content = f"""
-        [
-            {{
-                "Rules": [
-                    {{
-                        "Resource": ["collection/{collection_name}"],
-                        "Permission": [
-                            "aoss:CreateCollectionItems",
-                            "aoss:DeleteCollectionItems",
-                            "aoss:UpdateCollectionItems",
-                            "aoss:DescribeCollectionItems"
-                        ],
-                        "ResourceType": "collection"
-                    }},
-                    {{
-                        "Resource": ["index/{collection_name}/*"],
-                        "Permission": [
-                            "aoss:CreateIndex",
-                            "aoss:DeleteIndex",
-                            "aoss:UpdateIndex",
-                            "aoss:DescribeIndex",
-                            "aoss:ReadDocument",
-                            "aoss:WriteDocument"
-                        ],
-                        "ResourceType": "index"
-                    }}
+        # Create policy using string replacement to avoid f-string issues
+        policy_template = '''[
+    {
+        "Rules": [
+            {
+                "Resource": ["collection/COLLECTION_NAME"],
+                "Permission": [
+                    "aoss:CreateCollectionItems",
+                    "aoss:DeleteCollectionItems",
+                    "aoss:UpdateCollectionItems",
+                    "aoss:DescribeCollectionItems"
                 ],
-                "Principal": ["arn:aws:iam::{ACCOUNT_ID}:user/{IAM_USER}"]
-            }}
-        ]
-        """
+                "ResourceType": "collection"
+            },
+            {
+                "Resource": ["index/COLLECTION_NAME/*"],
+                "Permission": [
+                    "aoss:CreateIndex",
+                    "aoss:DeleteIndex",
+                    "aoss:UpdateIndex",
+                    "aoss:DescribeIndex",
+                    "aoss:ReadDocument",
+                    "aoss:WriteDocument"
+                ],
+                "ResourceType": "index"
+            }
+        ],
+        "Principal": ["PRINCIPAL_ARN"]
+    }
+]'''
+        
+        # Replace placeholders
+        principal_arn = f"arn:aws:iam::{ACCOUNT_ID}:root"
+        policy_content = policy_template.replace("COLLECTION_NAME", collection_name)
+        policy_content = policy_content.replace("USER_ARN", user_arn)
+        policy_content = policy_content.replace("PRINCIPAL_ARN", principal_arn)
+        
+        print(f"Debug - Final policy content: {policy_content}")
+        
         response = client.create_access_policy(
             description=f'Data access policy for {collection_name}',
             name=policy_name,
@@ -158,7 +175,49 @@ def waitForCollectionCreation(client,collection_name):
     raise Exception(f"Collection did not become active within {max_retries * 30} seconds")
 
 
+def verify_aws_identity(IAM_USER, ACCOUNT_ID):
+    """Verify the AWS account ID and IAM user exist"""
+    try:
+        # Get current account ID from STS
+        sts_client = boto3.client('sts')
+        identity = sts_client.get_caller_identity()
+        current_account = identity['Account']
+        
+        print(f"Current AWS Account ID: {current_account}")
+        print(f"Provided Account ID: {ACCOUNT_ID}")
+        
+        # Use the current account ID instead of the provided one
+        if current_account != ACCOUNT_ID:
+            print(f"INFO: Using current account ID ({current_account}) instead of provided ({ACCOUNT_ID})")
+            ACCOUNT_ID = current_account
+            
+        # Try to get the IAM user to verify it exists
+        iam_client = boto3.client('iam')
+        try:
+            user = iam_client.get_user(UserName=IAM_USER)
+            print(f"IAM User verified: {user['User']['UserName']}")
+            print(f"User ARN: {user['User']['Arn']}")
+            return True, current_account  # Return the correct account ID
+        except iam_client.exceptions.NoSuchEntityException:
+            print(f"ERROR: IAM user '{IAM_USER}' does not exist!")
+            return False, current_account
+            
+    except Exception as e:
+        print(f"Error verifying AWS identity: {e}")
+        return False, ACCOUNT_ID
+
+
 def main(collection_name,IAM_USER,ACCOUNT_ID):
+    # Verify AWS identity before proceeding
+    identity_verified, correct_account_id = verify_aws_identity(IAM_USER, ACCOUNT_ID)
+    if not identity_verified:
+        print("AWS identity verification failed. Exiting.")
+        return
+    
+    # Use the correct account ID
+    ACCOUNT_ID = correct_account_id
+    print(f"Using Account ID: {ACCOUNT_ID}")
+    
     encryption_policy_name = f'{collection_name}-encryption-policy'
     network_policy_name = f'{collection_name}-network-policy'
     access_policy_name = f'{collection_name}-access-policy'

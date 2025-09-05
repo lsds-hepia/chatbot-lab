@@ -111,7 +111,7 @@ Use the provided create_instance.py script to deploy your EC2 instance with the 
 
 In the `ec2.create_instance` we have the following parameters: 
 
-- ImageId: this is a custom Amazon Machine Image (AMI) that contains all the configurations and dependencies required for the chatbot application. For this lab, we have already created this image: `ami-0614e6650b1a2a3ac`. Please use it as parameter.
+- ImageId: this is a custom Amazon Machine Image (AMI) that contains all the configurations and dependencies required for the chatbot application. For this lab, we have already created this image: `ami-0f9fe38533211931a`. Please use it as parameter.
 - UserData:  is used to run script after the instance starts. The script will put the credentials in the instance so that the instance can aceess other services in AWS, the endpoint of the Vector DB, and the index name. Then the script will run the application.
 
     This is the script: 
