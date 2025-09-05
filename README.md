@@ -1,143 +1,87 @@
-# chatbot lab
+# Exercise: Build an AWS Lambda Function for Document Vectorization
 
-## Set up environment:
-1. Run this lab on your own device
-2. AWS CLI: Ensure AWS CLI is installed and configured (Ensure region set to 'us-east-1').
-3. Use venv or conda to install dependencies (Ensure to have python version 3.8 or higher)
+## 🎯 Objective
+In this exercise, you will create an **AWS Lambda function** that:
+1. Is triggered when a document is uploaded to an existing S3 bucket.  
+2. Extracts and splits the text into chunks.  
+3. Generates embeddings using **Amazon Bedrock**.  
+4. Stores the embeddings in an **OpenSearch vector database**.  
 
+We will use the S3 bucket and OpenSearch vector database already created in the first exercice. Your job is to create and configure the Lambda function.
 
-## Part 1: 
+---
 
-### Step 1: Object storage Creation
+## 📝 Steps
 
-Go to the Part1 folder: `cd Part1`
+### 1. Create the Lambda Function
+- Go to the **AWS Lambda Console**.  
+- Create a new function:  
+  - **Runtime:** Python 3.13 
+  - **Architecture:** arm64 
+- Name it something like: `vectorize-documents-groupNUMBER`.  
 
-Install required python libraries listed in the 'requirements.txt': `pip3 install -r requirements.txt`
+---
 
-Create an S3 bucket and upload a few PDF files by running: 
+### 2. Configure Environment Variables
+Add the following environment variables in the Lambda function settings:
+- `ENDPOINT` → The OpenSearch endpoint (From the first exercice).  
+- `INDEXNAME` → The name of the OpenSearch index.  
 
-`python3 create-S3-and-put-docs.py --bucket_name [YourBucketName] --local_path [PathToYourPDFFiles]`
+---
 
-Where placeholders:
-- **[YourBucketName]**: The name for the new S3 bucket to be created.
-- **[PathToYourPDFFiles]**: The local directory path where the PDF files are stored.
+### 3. Attach IAM Role & Policies (Students won't have acces to this feature the ide is to create a policy with required permissions so that they attach it directly while creating the lambda function)
+The Lambda function needs permissions to access other AWS services.  
+Attach an IAM role with at least these policies:
+- **AmazonS3ReadOnlyAccess** → to read documents from S3.  
+- **AmazonBedrockFullAccess** → to use embedding models from Bedrock.  
+- **aws-opensearch-serverless** (a custom policy) → to store embeddings in OpenSearch.  
 
+---
+### 4. Configure OpenSearch Access
+- Go to your Opensearch collection.  
+- In the **Access policies**, add a principal to allow the **IAM role ARN** of your Lambda function to write data.  
 
-### Step 2: Vector Store Creation
+---
 
-Create a vector database for storing embeddings by running: 
+### 5. Configure Function Settings
+In the **General Configuration** tab of your Lambda function, make the following changes:
 
-`python3 create-vector-db.py --collection_name [Name_of_colletion] --iam_user [YourIAM_user] --account_id [YourAccount_ID]`
-
-Where: 
-- **[Name_of_colletion]**: Name of the collection that you want to create.
-- **[YourIAM_user]** : the IAM user of your account.
-- **[YourAccount_ID]** : the ACCOUNT ID of your account.
-
-You will find YourIAM_iser and YourAccount_ID when you click on your account ID in the top right-hand corner of the AWS Amazon portal.
-
-The script performs the following actions:
-
-* Sets up encryption, network, and data access policies for the collection.
-* Creates a vector store with the name collection entered as argument.
-* After the vector store is set up, the script retrieves and displays the store's endpoint.
-
-### Step 3: Vectorizing the PDF Files: 
-
-After setting up the S3 bucket and Vector DB, we could process PDF files to generate and store embeddings in the vector database.
-
-Start by requesting access to the following models on the AWS Bedrock service(Through the aws web interface):
-
-- Titan Text Embeddings V2
-- Claude v2.1
-
-
-To do so:
-- Go to the **bedrock AWS Amazon** service in your AWS portal
-- Go to the **BedRock configurations** option in the left menu at the bottom of the page
-- Check that the access is granted for **Titan Embedding v1** and **Claude v2**
-
-Then, run: 
-
-`python3 vectorise-store.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name] --local_path [local_path]`
-
-Where: 
-
-- **[YourBucketName]**: The name of the S3 bucket containing the PDF files.
-- **[YourVectorDBEndpoint]**: Endpoint of the vector database.
-- **[Index_name]**: The index_name where to store the embeddings in the collection.
-- **[local_path]**: local_path 
-
-The vectorise-store.py script will:
-
-* Download PDF files from the S3 bucket.
-* Split them into chunks.
-* Generate embeddings from the chunks.
-* Create an index in the vector DB.
-* Store these embeddings in the OpenSearch Vector DB.
+- **Timeout:** set to **15 minutes** (the maximum allowed).  
+- **Ephemeral storage (/tmp):** set to the maximum **10 GB** to handle large documents.  
+- **Memory:** set to the maximum **10 GB**.  
 
 
-## Part 2:
+---
 
-### Step 1: Preparation
-
-Go to the Part1 folder: `cd Part2`
-
-Install required python libraries listed in the 'requirements.txt': `pip3 install -r requirements.txt`
-
-Before deploying the chatbot on an EC2 instance, complete the following preliminary steps:
-
-1. Create a Key Pair: This key pair will be used for SSH access to your EC2 instance.
-
-2. Create a Security Group: Define rules to allow the instance to be accessible externally. The security group should include the following rules:
-    - For inbound rules: you need to allow SSH traffic, HTTP/HTTPs traffic and open port 8501 used by the application.
-    - Outbound Rules: Allow all traffic.
-
-3.Create a `config.ini` file under Part2 folder with the following content:
-
-    [aws]
-    aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
-    aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY
-    region = us-east-1
-
-    [opensearch]
-    endpoint = YOUR_OPENSEARCH_ENDPOINT
-    index_name = YOUR_INDEX_NAME 
+### 6. Add the Dependencies Layer
+This Lambda function requires external Python libraries (`langchain`, `opensearch-py`, `pypdf`, etc.).  
+- A prebuilt **Lambda Layer**, named 'vectorize-dep', has already been created for you (arm64 / Python 3.13).  
+- Simply attach this layer to your function under **Layers**.  
+- It contains all the required dependencies packaged with the same runtime and architecture as your Lambda function.  
 
 
-### Step 2: Launching the Instance
+---
 
-Use the provided create_instance.py script to deploy your EC2 instance with the essential startup configurations. Before executing this, adjust Security Group and Key Pair already created in the first step.
+### 7. Add the Function Code
+Copy the provided `lambda_function.py` code into the inline editor.
+This code will:
+- Download the uploaded PDF from S3 into `/tmp`.  
+- Extract and chunk the text.  
+- Generate embeddings with Bedrock.  
+- Store them in OpenSearch.  
 
-In the `ec2.create_instance` we have the following parameters: 
+---
 
-- ImageId: this is a custom Amazon Machine Image (AMI) that contains all the configurations and dependencies required for the chatbot application. For this lab, we have already created this image: `ami-0614e6650b1a2a3ac`. Please use it as parameter.
-- UserData:  is used to run script after the instance starts. The script will put the credentials in the instance so that the instance can aceess other services in AWS, the endpoint of the Vector DB, and the index name. Then the script will run the application.
+### 8. Configure the Trigger
+- In the Lambda **Triggers** section, add:  
+  - **S3 bucket** → select the provided bucket.  
+  - **Event type:** `PUT` (ObjectCreated) → so the function runs when a file is uploaded.  
 
-    This is the script: 
+---
 
-    ```yaml
-    f"""#!/bin/bash
-    cat <<EOT > /home/ubuntu/chatbot-lab/Part2/config.ini
-    {config_content}
-    EOT
-    source /home/ubuntu/chatbotlab/bin/activate
-    ## Run the apllication 
-    cd /home/ubuntu/chatbot-lab/Part2
-    streamlit run chatbot.py 
-    """
+### 9. Test the Setup
+1. Upload a PDF into the assigned S3 bucket.  
+2. Check Monitor part to confirm that the function was triggered.  
+3. Verify that embeddings were added to the OpenSearch index.  
 
-    ````
-
-Run the following command to create your instance:
-
-`python3 create_instance.py --ami_id "ami-0614e6650b1a2a3ac" --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID]`
-
-Where: 
-
-- **[KeyPairName]**: The name of the key_pair created earlier.
-- **[SecurityGroupID]**: The id of the security group created earlier.
-
-## Step 3: Accessing the application
-
-Once the app starts, navigate to this URL `http://[public_ip_adress_of_yourVM]:8501` in your web browser to start interacting with your chatbot
+ 
