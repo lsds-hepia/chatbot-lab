@@ -1,4 +1,6 @@
 langchain-community
+langchain-aws
+langchain
 pypdf
 opensearch-py
 boto3
