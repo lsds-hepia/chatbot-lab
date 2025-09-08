@@ -17,14 +17,14 @@ def create_instance(ami_id, key_pair_name, security_group_id):
     ec2 = boto3.resource('ec2')
     # User code that's executed when the instance starts
     script = f"""#!/bin/bash
-    cat <<EOT > /home/ubuntu/chatbot-lab/Part2/config.ini
-    {config_content}
-    EOT
-    source /home/ubuntu/chatbotlab/bin/activate
-    ## Run the application 
-    cd /home/ubuntu/chatbot-lab/Part2
-    streamlit run chatbot.py 
-    """
+cat <<EOT > /home/ubuntu/chatbot-lab/Part2/config.ini
+{config_content}
+EOT
+source /home/ubuntu/chatbotlab/bin/activate
+## Run the application 
+cd /home/ubuntu/chatbot-lab/Part2
+streamlit run chatbot.py 
+"""
     encoded_script = base64.b64encode(script.encode()).decode('utf-8')
     # Create a new EC2 instance
     instance = ec2.create_instances(
