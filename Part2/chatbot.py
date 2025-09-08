@@ -155,7 +155,7 @@ def main():
         prompt = prepare_prompt(user_prompt, context)
         print(prompt)
         answer = generate_answer(prompt)
-        st.session_state.chat_history.append({"role": "system", "content": answer})
+        st.session_state.chat_history.append({"role": "system", "content": answer.content})
         for message in st.session_state.chat_history[-1:]:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
