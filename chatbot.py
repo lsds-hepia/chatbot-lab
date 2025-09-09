@@ -2,10 +2,11 @@
 import boto3
 import streamlit as st
 from langchain_aws import BedrockEmbeddings
-from langchain_community.chat_models import BedrockChat
+from langchain_aws import ChatBedrock
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_core.prompts import PromptTemplate
 import configparser
+
 
 def load_config():
     config = configparser.ConfigParser()
@@ -35,6 +36,65 @@ st.set_page_config(
 
 # streamlit page title
 st.title("Chat with your lecture")
+
+# Add document upload section
+st.sidebar.title("📄 Upload Documents")
+uploaded_files = st.sidebar.file_uploader(
+    "Upload documents to add to your knowledge base",
+    type=['pdf', 'txt', 'docx'],
+    accept_multiple_files=True
+)
+
+if uploaded_files:
+    st.sidebar.success(f"✅ {len(uploaded_files)} file(s) uploaded")
+    
+    # Check if these files have already been processed
+    file_names = [file.name for file in uploaded_files]
+    session_key = f"processed_files_{hash(tuple(sorted(file_names)))}"
+    
+    if session_key not in st.session_state:
+        # Auto-save and vectorize uploaded documents
+        import os
+        
+        # Create uploads directory if it doesn't exist
+        uploads_dir = "uploaded_documents"
+        if not os.path.exists(uploads_dir):
+            os.makedirs(uploads_dir)
+        
+        saved_files = []
+        for file in uploaded_files:
+            # Save file to uploads directory
+            file_path = os.path.join(uploads_dir, file.name)
+            with open(file_path, "wb") as f:
+                f.write(file.getbuffer())
+            saved_files.append(file.name)
+        
+        st.sidebar.success(f"📁 Saved {len(saved_files)} files to {uploads_dir}/")
+        
+        for filename in saved_files:
+            st.sidebar.write(f"- {filename}")
+        
+        # Auto-vectorize uploaded documents
+        st.sidebar.info("🔄 Auto-vectorizing documents...")
+        try:
+            from vectorise_store import vectorize
+            with st.sidebar:
+                with st.spinner("Processing and vectorizing documents..."):
+                    vectorize(endpoint, index_name, uploads_dir)
+            st.sidebar.success("✅ Documents successfully vectorized and ready for chat!")
+            
+            # Mark files as processed
+            st.session_state[session_key] = True
+            
+        except Exception as e:
+            st.sidebar.error(f"❌ Error vectorizing documents: {e}")
+            import traceback
+            st.sidebar.text_area("Error Details", traceback.format_exc(), height=150)
+    else:
+        # Files already processed
+        st.sidebar.info("📚 Documents already processed and ready for chat!")
+        for file in uploaded_files:
+            st.sidebar.write(f"- {file.name}")
 
 
 
@@ -117,7 +177,7 @@ def prepare_prompt(question, context):
     return prompt_formatted_str
 
 def generate_answer(prompt):
-    model = BedrockChat(model_id="anthropic.claude-v2", model_kwargs={"temperature": 0.1}, client=bedrock_client)
+    model = ChatBedrock(model_id="anthropic.claude-v2", model_kwargs={"temperature": 0.1}, client=bedrock_client)
     answer = model.invoke(prompt)
     return answer
 
@@ -155,7 +215,7 @@ def main():
         prompt = prepare_prompt(user_prompt, context)
         print(prompt)
         answer = generate_answer(prompt)
-        st.session_state.chat_history.append({"role": "system", "content": answer})
+        st.session_state.chat_history.append({"role": "system", "content": answer.content})
         for message in st.session_state.chat_history[-1:]:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
