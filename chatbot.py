@@ -28,19 +28,20 @@ bedrock_client = boto3.client(service_name="bedrock-runtime",
 
 # configuring streamlit page settings
 st.set_page_config(
-    page_title="cloud lecture lab",
-    page_icon="💬",
+    page_title="Business Knowledge Assistant",
+    page_icon="💼",
     layout="centered"
 )
 
 
 # streamlit page title
-st.title("Chat with your lecture")
+st.title("💼 Ask Your Data")
+st.subheader("Get instant insights from your business documents")
 
 # Add document upload section
-st.sidebar.title("📄 Upload Documents")
+st.sidebar.title("📄 Upload Business Documents")
 uploaded_files = st.sidebar.file_uploader(
-    "Upload documents to add to your knowledge base",
+    "Upload reports, presentations, or any business documents",
     type=['pdf', 'txt', 'docx'],
     accept_multiple_files=True
 )
@@ -157,15 +158,20 @@ def similarity_search(client, embed_query, index_name):
 
 def prepare_prompt(question, context):
     template = """
-    You are a Professor. The student will ask you a questions about the lecture. 
-    Use following piece of context to answer the question. 
-    If you don't know the answer, just say you don't know. 
+    You are a knowledgeable business consultant and data analyst. A manager is asking you questions about their business documents and data. 
+    
+    Provide clear, actionable insights based on the information available. Use business-friendly language and avoid technical jargon. 
+    Focus on practical implications and key takeaways that would help in decision-making.
+    
+    If you don't have enough information to provide a complete answer, clearly state what's missing and suggest what additional data might be needed.
 
-    Context:   <context>
+    Context from business documents: <context>
     {context}
     </context>
-    Question: {question}
-    Answer: 
+    
+    Manager's Question: {question}
+    
+    Business Insight:
 
     """
 
@@ -198,7 +204,7 @@ def main():
 
 
     # input field for user's message
-    user_prompt = st.chat_input("Ask a question for your knowledge base")
+    user_prompt = st.chat_input("Ask a question about your business data and documents...")
 
     if user_prompt:
     # add user's message to chat and display it
