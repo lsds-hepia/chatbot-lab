@@ -1,0 +1,23 @@
+---
+- name: Delete EC2 instances
+  hosts: localhost
+  gather_facts: no
+  become: False
+  tasks:
+    - name: Read instance identifiers from the file
+      ansible.builtin.slurp:
+        src: ./instance_ids.txt
+      register: instance_ids_raw
+
+    - name: Convert instance identifiers to a list
+      set_fact:
+        instance_ids: "{{ instance_ids_raw['content'] | b64decode | split('\n') | select('match', '^i-[a-zA-Z0-9]+') | list }}"
+
+    - name: Show public IP
+      debug:
+        var: instance_ids
+
+    - name: Terminate EC2 instances
+      amazon.aws.ec2_instance:
+        instance_ids: "{{ instance_ids }}"
+        state: absent

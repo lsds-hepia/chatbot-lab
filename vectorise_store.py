@@ -2,19 +2,43 @@
 
 import boto3
 import os
+import configparser
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_aws import BedrockEmbeddings
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_community.vectorstores import OpenSearchVectorSearch
 
-## Bedrock client
-bedrock_client = boto3.client(service_name="bedrock-runtime")
+## Load configuration from config.ini
+def load_config():
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    return config
 
+config = load_config()
+
+aws_access_key_id = config.get('aws', 'aws_access_key_id')
+aws_secret_access_key = config.get('aws', 'aws_secret_access_key')
+region = config.get('aws', 'region')
+
+## Bedrock client with credentials from config
+bedrock_client = boto3.client(
+    service_name="bedrock-runtime",
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+    region_name=region
+)
 
 ## Configuration for AWS authentication and OpenSearch client
-credentials = boto3.Session().get_credentials()
-awsauth = AWSV4SignerAuth(credentials, 'us-east-1', 'aoss')
+awsauth = AWSV4SignerAuth(
+    boto3.Session(
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=region
+    ).get_credentials(), 
+    region, 
+    'aoss'
+)
 
 ## Embedding model IDs 
 model_ids = [

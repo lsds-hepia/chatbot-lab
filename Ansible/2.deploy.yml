@@ -1,0 +1,41 @@
+---
+- name: Run Streamlit Application
+  hosts: my_hosts
+  gather_facts: yes
+  become: false
+  vars:
+    virtual_env_path: /home/ubuntu/chatbotlab/bin/activate
+    application_path: /home/ubuntu/chatbot-lab
+
+  tasks:
+
+    - name: Get instance metadata to retrieve user_id
+      amazon.aws.ec2_instance_info:
+        filters:
+          "private-ip-address": "{{ ansible_default_ipv4.address }}"
+      delegate_to: localhost
+      register: instance_info
+
+    - name: Set user_id from instance tags
+      set_fact:
+        user_id: "{{ instance_info.instances[0].tags.user_id }}"
+
+    - name: Generate user-specific config.ini from template
+      template:
+        src: config.ini.j2
+        dest: "{{ application_path }}/config.ini"
+      become_user: ubuntu
+      tags: config
+
+
+    - name: Start Streamlit with nohup
+      shell: |
+        source {{ virtual_env_path }}
+        cd {{ application_path }}
+        nohup streamlit run chatbot.py --server.port 8501 --server.address 0.0.0.0 > streamlit.log 2>&1 &
+      args:
+        executable: /bin/bash
+
+
+   
+  

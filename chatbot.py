@@ -183,7 +183,8 @@ def prepare_prompt(question, context):
     return prompt_formatted_str
 
 def generate_answer(prompt):
-    model = ChatBedrock(model_id="anthropic.claude-v2", model_kwargs={"temperature": 0.1}, client=bedrock_client)
+    # Use Claude 3.5 Sonnet which supports on-demand throughput
+    model = ChatBedrock(model_id="anthropic.claude-3-5-sonnet-20240620-v1:0", model_kwargs={"temperature": 0.1}, client=bedrock_client)
     answer = model.invoke(prompt)
     return answer
 
