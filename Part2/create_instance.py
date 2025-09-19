@@ -1,5 +1,6 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
 
+from distro import name
 import boto3
 import base64
 import argparse
@@ -10,7 +11,7 @@ def get_config_content(filepath):
         return file.read()
 
 
-def create_instance(ami_id, key_pair_name, security_group_id):
+def create_instance(ami_id, key_pair_name, security_group_id, instance_name):
 
     # Load the config content
     config_content = get_config_content('config.ini')
@@ -35,7 +36,8 @@ streamlit run chatbot.py
                 'Tags': [
                     {
                         'Key': 'Name',
-                        'Value': 'chatbot-instance'
+                        # use the instance_name variable
+                        'Value': instance_name
                     },
                 ]
             }, ],
@@ -50,10 +52,10 @@ streamlit run chatbot.py
     return instance
  
 
-def main(ami_id, key_pair_name, security_group_id):
+def main(ami_id, key_pair_name, security_group_id, name):
     
     print("Creating an EC2 instance")
-    instance = create_instance(ami_id, key_pair_name, security_group_id)
+    instance = create_instance(ami_id, key_pair_name, security_group_id, name)
     print("Instance created with ID:", instance[0].id)
 
 if __name__ == '__main__':
