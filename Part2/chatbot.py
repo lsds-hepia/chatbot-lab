@@ -1,8 +1,7 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
 import boto3
 import streamlit as st
-from langchain_aws import BedrockEmbeddings
-from langchain_community.chat_models import BedrockChat
+from langchain_aws import BedrockEmbeddings, ChatBedrock
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_core.prompts import PromptTemplate
 import configparser
@@ -131,7 +130,7 @@ def generate_answer(prompt):
     
     for model_id in model_ids:
         try:
-            model = BedrockChat(model_id=model_id, model_kwargs={"temperature": 0.1}, client=bedrock_client)
+            model = ChatBedrock(model_id=model_id, model_kwargs={"temperature": 0.1}, client=bedrock_client)
             print(f"Using chat model: {model_id}")
             answer = model.invoke(prompt)
             return answer
