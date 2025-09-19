@@ -117,9 +117,26 @@ def prepare_prompt(question, context):
     return prompt_formatted_str
 
 def generate_answer(prompt):
-    model = BedrockChat(model_id="anthropic.claude-v2", model_kwargs={"temperature": 0.1}, client=bedrock_client)
-    answer = model.invoke(prompt)
-    return answer
+    # Try multiple Claude model IDs in order of preference
+    model_ids = [
+        "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Latest Claude 3.5 Sonnet
+        "anthropic.claude-3-5-sonnet-20240620-v1:0",  # Previous Claude 3.5 Sonnet
+        "anthropic.claude-3-sonnet-20240229-v1:0",    # Claude 3 Sonnet
+        "anthropic.claude-3-haiku-20240307-v1:0"      # Claude 3 Haiku (faster/cheaper)
+    ]
+    
+    for model_id in model_ids:
+        try:
+            model = BedrockChat(model_id=model_id, model_kwargs={"temperature": 0.1}, client=bedrock_client)
+            print(f"Using chat model: {model_id}")
+            answer = model.invoke(prompt)
+            return answer
+        except Exception as e:
+            print(f"Model {model_id} not available: {e}")
+            continue
+    
+    # If no model works, raise an error
+    raise ValueError("No Claude model available. Please check your Bedrock model access.")
 
 
 def main():

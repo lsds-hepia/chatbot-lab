@@ -48,14 +48,15 @@ After setting up the S3 bucket and Vector DB, we could process PDF files to gene
 
 Start by requesting access to the following models on the AWS Bedrock service(Through the aws web interface):
 
-- Titan Text Embeddings V2
-- Claude v2.1
+- "Titan Text Embeddings V2" and/or "Titan Embeddings G1 - Text"
+- Claude 3.5 Sonnet, Claude 3 Sonnet, or Claude 3 Haiku models
+- In all probability, these are already enabled. Doesn't hurt to check though.
 
 
 To do so:
 - Go to the **bedrock AWS Amazon** service in your AWS portal
-- Go to the **BedRock configurations** option in the left menu at the bottom of the page
-- Check that the access is granted for **Titan Embedding v1** and **Claude v2**
+- Go to the **Model access** option in the left menu at the bottom of the page
+- Check that the access is granted for those mentioned above.
 
 Then, run: 
 
