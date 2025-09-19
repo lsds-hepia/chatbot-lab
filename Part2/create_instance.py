@@ -28,6 +28,17 @@ streamlit run chatbot.py
     encoded_script = base64.b64encode(script.encode()).decode('utf-8')
     # Create a new EC2 instance
     instance = ec2.create_instances(
+        # give the intance a name
+        TagSpecifications=[
+            {
+                'ResourceType': 'instance',
+                'Tags': [
+                    {
+                        'Key': 'Name',
+                        'Value': 'chatbot-instance'
+                    },
+                ]
+            }, ],
         ImageId=ami_id,
         MinCount=1,
         MaxCount=1,
@@ -50,5 +61,6 @@ if __name__ == '__main__':
     parser.add_argument("--ami_id", help="The ID of the AMI to use for the instance")
     parser.add_argument("--key_pair_name", help="The name of the key pair to use for the instance")
     parser.add_argument("--security_group_id", help="The ID of the security group to use for the instance")
+    parser.add_argument("--name", help="The name tag for the instance", default="CloudSys2025-chatbot-instance")
     args = parser.parse_args()
-    main(args.ami_id, args.key_pair_name, args.security_group_id)
+    main(args.ami_id, args.key_pair_name, args.security_group_id, args.name)
