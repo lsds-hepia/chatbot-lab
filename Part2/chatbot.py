@@ -1,7 +1,8 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
 import boto3
 import streamlit as st
-from langchain_aws import BedrockEmbeddings, ChatBedrock
+from langchain_community.embeddings import BedrockEmbeddings
+from langchain_community.chat_models import BedrockChat
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_core.prompts import PromptTemplate
 import configparser
@@ -56,26 +57,7 @@ def ospensearch_client(endpoint):
     return client
 
 def get_embedding(question, bedrock_client):
-    # Try multiple model IDs in order of preference (same as vectorization script)
-    model_ids = [
-        "amazon.titan-embed-text-v2:0",    # Latest version
-        "amazon.titan-embed-text-v1",      # Previous version  
-        "cohere.embed-english-v3"          # Alternative
-    ]
-    
-    embeddings_model = None
-    for model_id in model_ids:
-        try:
-            embeddings_model = BedrockEmbeddings(model_id=model_id)
-            print(f"Using embedding model: {model_id}")
-            break
-        except Exception as e:
-            print(f"Model {model_id} not available: {e}")
-            continue
-    
-    if embeddings_model is None:
-        raise ValueError("No embedding model available. Please check your Bedrock model access.")
-    
+    embeddings_model = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1", client=bedrock_client)
     embedding = embeddings_model.embed_query(question)
     return embedding
 
@@ -116,26 +98,9 @@ def prepare_prompt(question, context):
     return prompt_formatted_str
 
 def generate_answer(prompt):
-    # Try multiple Claude model IDs in order of preference
-    model_ids = [
-        "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Latest Claude 3.5 Sonnet
-        "anthropic.claude-3-5-sonnet-20240620-v1:0",  # Previous Claude 3.5 Sonnet
-        "anthropic.claude-3-sonnet-20240229-v1:0",    # Claude 3 Sonnet
-        "anthropic.claude-3-haiku-20240307-v1:0"      # Claude 3 Haiku (faster/cheaper)
-    ]
-    
-    for model_id in model_ids:
-        try:
-            model = ChatBedrock(model_id=model_id, model_kwargs={"temperature": 0.1})
-            print(f"Using chat model: {model_id}")
-            answer = model.invoke(prompt)
-            return answer
-        except Exception as e:
-            print(f"Model {model_id} not available: {e}")
-            continue
-    
-    # If no model works, raise an error
-    raise ValueError("No Claude model available. Please check your Bedrock model access.")
+    model = BedrockChat(model_id="anthropic.claude-v2", model_kwargs={"temperature": 0.1}, client=bedrock_client)
+    answer = model.invoke(prompt)
+    return answer
 
 
 def main():
@@ -171,7 +136,7 @@ def main():
         prompt = prepare_prompt(user_prompt, context)
         print(prompt)
         answer = generate_answer(prompt)
-        st.session_state.chat_history.append({"role": "system", "content": answer.content})
+        st.session_state.chat_history.append({"role": "system", "content": answer})
         for message in st.session_state.chat_history[-1:]:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
