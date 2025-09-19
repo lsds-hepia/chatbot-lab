@@ -24,6 +24,13 @@ bedrock_client = boto3.client(service_name="bedrock-runtime",
     aws_access_key_id=aws_access_key_id,
     aws_secret_access_key=aws_secret_access_key, region_name=region)
 
+# Create a boto3 session for langchain_aws models
+boto3_session = boto3.Session(
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+    region_name=region
+)
+
 # configuring streamlit page settings
 st.set_page_config(
     page_title="cloud lecture lab",
@@ -66,7 +73,13 @@ def get_embedding(question, bedrock_client):
     embeddings_model = None
     for model_id in model_ids:
         try:
-            embeddings_model = BedrockEmbeddings(model_id=model_id, client=bedrock_client)
+            embeddings_model = BedrockEmbeddings(
+                model_id=model_id, 
+                region_name=region,
+                credentials_profile_name=None
+            )
+            # Set the boto3 session client
+            embeddings_model.client = boto3_session.client("bedrock-runtime")
             print(f"Using embedding model: {model_id}")
             break
         except Exception as e:
@@ -130,7 +143,14 @@ def generate_answer(prompt):
     
     for model_id in model_ids:
         try:
-            model = ChatBedrock(model_id=model_id, model_kwargs={"temperature": 0.1}, client=bedrock_client)
+            model = ChatBedrock(
+                model_id=model_id, 
+                model_kwargs={"temperature": 0.1},
+                region_name=region,
+                credentials_profile_name=None
+            )
+            # Set the boto3 session for the model
+            model.client = boto3_session.client("bedrock-runtime")
             print(f"Using chat model: {model_id}")
             answer = model.invoke(prompt)
             return answer
