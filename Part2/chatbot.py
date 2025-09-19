@@ -119,6 +119,10 @@ def prepare_prompt(question, context):
 def generate_answer(prompt):
     # Try multiple Claude model IDs in order of preference
     model_ids = [
+        # claude 4
+        "anthropic.claude-4-0-20241022-v2:0",  # Latest Claude 4
+        "anthropic.claude-4-0-20240620-v1:0",  # Previous Claude 4
+        # claude 3.5
         "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Latest Claude 3.5 Sonnet
         "anthropic.claude-3-5-sonnet-20240620-v1:0",  # Previous Claude 3.5 Sonnet
         "anthropic.claude-3-sonnet-20240229-v1:0",    # Claude 3 Sonnet
