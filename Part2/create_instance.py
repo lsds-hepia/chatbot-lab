@@ -1,6 +1,5 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
 
-from distro import name
 import boto3
 import base64
 import argparse
