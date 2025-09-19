@@ -154,7 +154,7 @@ or
 
 `aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicDnsName' --output text --instance-ids [your ID from above]`
 
-Note the output of the first.. you can deduce how to get other information...
+Compare the output of the first ans second commands... you can deduce how to get other (and all) information...
 
 `aws ec2 describe-instances --query 'Reservations[*].Instances[*].Architecture' --output json --instance-ids [your ID from above]`
 
