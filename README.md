@@ -1,9 +1,10 @@
 # chatbot lab
 
 ## Set up environment:
-1. Run this lab on your own device
-2. AWS CLI: Ensure AWS CLI is installed and configured (Ensure region set to 'us-east-1').
-3. Use venv or conda to install dependencies (Ensure to have python version 3.8 or higher)
+1. You can run this lab on your own device.
+2. OR you can start an AWS instance and run it there.
+3. AWS CLI: Ensure AWS CLI is installed and configured (Ensure region set to 'us-east-1').
+4. Use venv or conda to install dependencies (Ensure to have python version 3.8 or higher)
 
 
 ## Part 1: 
@@ -49,7 +50,7 @@ After setting up the S3 bucket and Vector DB, we could process PDF files to gene
 Start by requesting access to the following models on the AWS Bedrock service(Through the aws web interface):
 
 - "Titan Text Embeddings V2" and/or "Titan Embeddings G1 - Text"
-- Claude 3.5 Sonnet, Claude 3 Sonnet, or Claude 3 Haiku models
+- Claude 3.5 Sonnet
 - In all probability, these are already enabled. Doesn't hurt to check though.
 
 
@@ -88,11 +89,12 @@ Install required python libraries listed in the 'requirements.txt': `pip3 instal
 
 Before deploying the chatbot on an EC2 instance, complete the following preliminary steps:
 
-1. Create a Key Pair: This key pair will be used for SSH access to your EC2 instance.
+1. Create a Key Pair: This key pair will be used for SSH access to your EC2 instance. Either use the AWS CLI or the console. Give the keypair a good name.
 
 2. Create a Security Group: Define rules to allow the instance to be accessible externally. The security group should include the following rules:
-    - For inbound rules: you need to allow SSH traffic, HTTP/HTTPs traffic and open port 8501 used by the application.
+    - For inbound rules: you need to allow SSH traffic, HTTP/HTTPs traffic and open port 8501 used by the application. (22,80,443,8501)
     - Outbound Rules: Allow all traffic.
+Either use the AWS CLI or the console. Give the security group a good name.
 
 3.Create a `config.ini` file under Part2 folder with the following content:
 
@@ -112,7 +114,7 @@ Use the provided create_instance.py script to deploy your EC2 instance with the 
 
 In the `ec2.create_instance` we have the following parameters: 
 
-- ImageId: this is a custom Amazon Machine Image (AMI) that contains all the configurations and dependencies required for the chatbot application. For this lab, we have already created this image: `ami-0f9fe38533211931a`. Please use it as parameter.
+- ImageId: this is a custom Amazon Machine Image (AMI) that contains all the configurations and dependencies required for the chatbot application. For this lab, we have already created this image: `ami-05e80ecf6022f7aec`. Please use it as parameter.
 - UserData:  is used to run script after the instance starts. The script will put the credentials in the instance so that the instance can aceess other services in AWS, the endpoint of the Vector DB, and the index name. Then the script will run the application.
 
     This is the script: 
@@ -123,7 +125,7 @@ In the `ec2.create_instance` we have the following parameters:
     {config_content}
     EOT
     source /home/ubuntu/chatbotlab/bin/activate
-    ## Run the apllication 
+    ## Run the application 
     cd /home/ubuntu/chatbot-lab/Part2
     streamlit run chatbot.py 
     """
@@ -132,13 +134,30 @@ In the `ec2.create_instance` we have the following parameters:
 
 Run the following command to create your instance:
 
-`python3 create_instance.py --ami_id "ami-0614e6650b1a2a3ac" --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID]`
+`python3 create_instance.py --ami_id "ami-0614e6650b1a2a3ac" --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID] --name [Name]`
 
 Where: 
 
 - **[KeyPairName]**: The name of the key_pair created earlier.
 - **[SecurityGroupID]**: The id of the security group created earlier.
+- **[Name]**: The name that will appear on the "Instances" dashboard... something unique and good?
 
 ## Step 3: Accessing the application
 
 Once the app starts, navigate to this URL `http://[public_ip_adress_of_yourVM]:8501` in your web browser to start interacting with your chatbot
+
+`aws ec2 describe-instances --instance-ids [your ID from above]`
+
+or 
+
+`aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicDnsName' --output text --instance-ids [your ID from above]`
+
+Note the output of the first.. you can deduce how to get other information...
+
+`aws ec2 describe-instances --query 'Reservations[*].Instances[*].Architecture' --output json --instance-ids [your ID from above]`
+
+or 
+
+`aws ec2 describe-instances --query 'Reservations[*].Instances[*].BlockDevices' --output json --instance-ids [your ID from above]`
+
+etc etc...
