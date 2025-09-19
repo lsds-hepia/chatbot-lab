@@ -146,6 +146,8 @@ Where:
 
 Once the app starts, navigate to this URL `http://[public_ip_adress_of_yourVM]:8501` in your web browser to start interacting with your chatbot
 
+To find out about your instance, you can e.g.
+
 `aws ec2 describe-instances --instance-ids [your ID from above]`
 
 or 
