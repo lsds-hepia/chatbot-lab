@@ -14,6 +14,18 @@ client = boto3.client('opensearchserverless')
 def createEncryptionPolicy(client,policy_name, collection_name):
     """Creates an encryption policy for the specified collection."""
     try:
+        # First, check if policy already exists
+        try:
+            existing_policy = client.get_security_policy(name=policy_name, type='encryption')
+            print(f'\nEncryption policy "{policy_name}" already exists:')
+            print(existing_policy)
+            return existing_policy
+        except botocore.exceptions.ClientError as check_error:
+            if check_error.response['Error']['Code'] != 'ResourceNotFoundException':
+                raise check_error
+            # Policy doesn't exist, create it
+            pass
+        
         response = client.create_security_policy(
             description=f'Encryption policy for {collection_name}',
             name=policy_name,
@@ -34,10 +46,15 @@ def createEncryptionPolicy(client,policy_name, collection_name):
         )
         print('\nEncryption policy created:')
         print(response)
+        return response
     except botocore.exceptions.ClientError as error:
         if error.response['Error']['Code'] == 'ConflictException':
             print(
                 '[ConflictException] The policy name or rules conflict with an existing policy.')
+        elif error.response['Error']['Code'] == 'ServiceQuotaExceededException':
+            print(f'[ServiceQuotaExceededException] Too many encryption policies. Consider cleaning up unused policies.')
+            print(f'Current limit: 150 encryption policies per account')
+            print(f'You can list policies with: aws opensearchserverless list-security-policies --type encryption')
         else:
             raise error
 
@@ -45,6 +62,18 @@ def createEncryptionPolicy(client,policy_name, collection_name):
 def createNetworkPolicy(client,policy_name,collection_name):
     """Creates a network policy for the specified collection."""
     try:
+        # First, check if policy already exists
+        try:
+            existing_policy = client.get_security_policy(name=policy_name, type='network')
+            print(f'\nNetwork policy "{policy_name}" already exists:')
+            print(existing_policy)
+            return existing_policy
+        except botocore.exceptions.ClientError as check_error:
+            if check_error.response['Error']['Code'] != 'ResourceNotFoundException':
+                raise check_error
+            # Policy doesn't exist, create it
+            pass
+            
         response = client.create_security_policy(
             description=f'Network policy for {collection_name}',
             name=policy_name,
@@ -68,10 +97,14 @@ def createNetworkPolicy(client,policy_name,collection_name):
         )
         print('\nNetwork policy created:')
         print(response)
+        return response
     except botocore.exceptions.ClientError as error:
         if error.response['Error']['Code'] == 'ConflictException':
             print(
                 '[ConflictException] A network policy with this name already exists.')
+        elif error.response['Error']['Code'] == 'ServiceQuotaExceededException':
+            print(f'[ServiceQuotaExceededException] Too many network policies. Consider cleaning up unused policies.')
+            print(f'You can list policies with: aws opensearchserverless list-security-policies --type network')
         else:
             raise error
 
@@ -88,6 +121,18 @@ def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID
     print(f"Debug - User ARN: {user_arn}")
     
     try:
+        # First, check if policy already exists
+        try:
+            existing_policy = client.get_access_policy(name=policy_name, type='data')
+            print(f'\nAccess policy "{policy_name}" already exists:')
+            print(existing_policy)
+            return existing_policy
+        except botocore.exceptions.ClientError as check_error:
+            if check_error.response['Error']['Code'] != 'ResourceNotFoundException':
+                raise check_error
+            # Policy doesn't exist, create it
+            pass
+        
         # Create policy using string replacement to avoid f-string issues
         policy_template = '''[
     {
@@ -135,9 +180,13 @@ def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID
         )
         print('\nAccess policy created:')
         print(response)
+        return response
     except botocore.exceptions.ClientError as error:
         if error.response['Error']['Code'] == 'ConflictException':
             print('[ConflictException] An access policy with this name already exists.')
+        elif error.response['Error']['Code'] == 'ServiceQuotaExceededException':
+            print(f'[ServiceQuotaExceededException] Too many access policies. Consider cleaning up unused policies.')
+            print(f'You can list policies with: aws opensearchserverless list-access-policies --type data')
         else:
             raise error
 
@@ -232,17 +281,60 @@ def main(collection_name,IAM_USER,ACCOUNT_ID):
     print(f"Using Account ID: {ACCOUNT_ID}")
     print(f"Using IAM User: {IAM_USER}")
     
+    # Check if collection already exists
+    try:
+        existing_collection = client.batch_get_collection(names=[collection_name])
+        if existing_collection['collectionDetails']:
+            collection_details = existing_collection['collectionDetails'][0]
+            print(f'\nCollection "{collection_name}" already exists:')
+            print(f'Status: {collection_details.get("status", "UNKNOWN")}')
+            if 'collectionEndpoint' in collection_details:
+                host = collection_details['collectionEndpoint']
+                final_host = host.replace("https://", "")
+                print("Collection ENDPOINT:", final_host)
+                return final_host
+            else:
+                print("Collection exists but endpoint not available yet")
+                return None
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] != 'ResourceNotFoundException':
+            print(f"Error checking for existing collection: {e}")
+            return
+        # Collection doesn't exist, continue with creation
+        pass
+    
     encryption_policy_name = f'{collection_name}-encryption-policy'
     network_policy_name = f'{collection_name}-network-policy'
     access_policy_name = f'{collection_name}-access-policy'
+    
+    print(f"\nCreating policies for collection: {collection_name}")
     createEncryptionPolicy(client, encryption_policy_name, collection_name)
     createNetworkPolicy(client, network_policy_name, collection_name)
     createAccessPolicy(client, access_policy_name, collection_name,IAM_USER,ACCOUNT_ID)
-    collection = client.create_collection(name=collection_name,type='VECTORSEARCH')
-    ENDPOINT= waitForCollectionCreation(client,collection_name)
-
-    print("Collection created successfully:", collection)
+    
+    print(f"\nCreating collection: {collection_name}")
+    try:
+        collection = client.create_collection(name=collection_name,type='VECTORSEARCH')
+        print("Collection creation initiated:", collection)
+    except botocore.exceptions.ClientError as error:
+        if error.response['Error']['Code'] == 'ConflictException':
+            print(f'[ConflictException] Collection "{collection_name}" already exists.')
+            # Try to get the existing collection details
+            existing_collection = client.batch_get_collection(names=[collection_name])
+            if existing_collection['collectionDetails']:
+                collection_details = existing_collection['collectionDetails'][0]
+                if 'collectionEndpoint' in collection_details:
+                    host = collection_details['collectionEndpoint']
+                    final_host = host.replace("https://", "")
+                    print("Collection ENDPOINT:", final_host)
+                    return final_host
+        else:
+            raise error
+    
+    ENDPOINT = waitForCollectionCreation(client,collection_name)
+    print("Collection created successfully!")
     print("Collection ENDPOINT:", ENDPOINT)
+    return ENDPOINT
 
 if __name__== "__main__":
     parser = argparse.ArgumentParser(description="Create collection")
