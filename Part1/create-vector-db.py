@@ -176,47 +176,61 @@ def waitForCollectionCreation(client,collection_name):
 
 
 def verify_aws_identity(IAM_USER, ACCOUNT_ID):
-    """Verify the AWS account ID and IAM user exist"""
+    """Verify the AWS account ID using STS caller identity"""
     try:
-        # Get current account ID from STS
+        # Get current identity from STS (doesn't require IAM permissions)
         sts_client = boto3.client('sts')
         identity = sts_client.get_caller_identity()
         current_account = identity['Account']
+        current_arn = identity['Arn']
+        current_user_id = identity['UserId']
         
         print(f"Current AWS Account ID: {current_account}")
+        print(f"Current User ARN: {current_arn}")
+        print(f"Current User ID: {current_user_id}")
         print(f"Provided Account ID: {ACCOUNT_ID}")
         
         # Use the current account ID instead of the provided one
         if current_account != ACCOUNT_ID:
             print(f"INFO: Using current account ID ({current_account}) instead of provided ({ACCOUNT_ID})")
             ACCOUNT_ID = current_account
+        
+        # Extract username from ARN if it's a user ARN
+        if ":user/" in current_arn:
+            actual_username = current_arn.split("/")[-1]
+            print(f"Detected IAM username from ARN: {actual_username}")
             
-        # Try to get the IAM user to verify it exists
-        iam_client = boto3.client('iam')
-        try:
-            user = iam_client.get_user(UserName=IAM_USER)
-            print(f"IAM User verified: {user['User']['UserName']}")
-            print(f"User ARN: {user['User']['Arn']}")
-            return True, current_account  # Return the correct account ID
-        except iam_client.exceptions.NoSuchEntityException:
-            print(f"ERROR: IAM user '{IAM_USER}' does not exist!")
-            return False, current_account
+            if actual_username != IAM_USER:
+                print(f"INFO: Using actual username ({actual_username}) instead of provided ({IAM_USER})")
+                IAM_USER = actual_username
+        elif ":role/" in current_arn:
+            print("Running as IAM role, using role ARN for permissions")
+        else:
+            print("Running as root user or unknown identity type")
+            
+        print(f"Identity verification successful!")
+        print(f"Final Account ID: {current_account}")
+        print(f"Final IAM User: {IAM_USER}")
+        
+        return True, current_account, IAM_USER  # Return account ID and corrected username
             
     except Exception as e:
         print(f"Error verifying AWS identity: {e}")
-        return False, ACCOUNT_ID
+        return False, ACCOUNT_ID, IAM_USER
 
 
 def main(collection_name,IAM_USER,ACCOUNT_ID):
     # Verify AWS identity before proceeding
-    identity_verified, correct_account_id = verify_aws_identity(IAM_USER, ACCOUNT_ID)
+    identity_verified, correct_account_id, correct_iam_user = verify_aws_identity(IAM_USER, ACCOUNT_ID)
     if not identity_verified:
         print("AWS identity verification failed. Exiting.")
         return
     
-    # Use the correct account ID
+    # Use the correct account ID and IAM user
     ACCOUNT_ID = correct_account_id
+    IAM_USER = correct_iam_user
     print(f"Using Account ID: {ACCOUNT_ID}")
+    print(f"Using IAM User: {IAM_USER}")
     
     encryption_policy_name = f'{collection_name}-encryption-policy'
     network_policy_name = f'{collection_name}-network-policy'

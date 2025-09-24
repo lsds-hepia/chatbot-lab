@@ -142,6 +142,10 @@ Where:
 - **[SecurityGroupID]**: The id of the security group created earlier.
 - **[Name]**: The name that will appear on the "Instances" dashboard... something unique and good?
 
+Try this:
+
+`aws ec2 wait instance-status-ok --instance-ids [your ID from above]`
+
 ## Step 3: Accessing the application
 
 Once the app starts, navigate to this URL `http://[public_ip_adress_of_yourVM]:8501` in your web browser to start interacting with your chatbot
