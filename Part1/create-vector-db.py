@@ -51,12 +51,15 @@ def createEncryptionPolicy(client,policy_name, collection_name):
         if error.response['Error']['Code'] == 'ConflictException':
             print(
                 '[ConflictException] The policy name or rules conflict with an existing policy.')
+            return None
         elif error.response['Error']['Code'] == 'ServiceQuotaExceededException':
             print(f'[ServiceQuotaExceededException] Too many encryption policies. Consider cleaning up unused policies.')
             print(f'Current limit: 150 encryption policies per account')
             print(f'You can list policies with: aws opensearchserverless list-security-policies --type encryption')
+            return None
         else:
-            raise error
+            print(f"Error creating encryption policy: {error}")
+            return None
 
 
 def createNetworkPolicy(client,policy_name,collection_name):
@@ -102,11 +105,14 @@ def createNetworkPolicy(client,policy_name,collection_name):
         if error.response['Error']['Code'] == 'ConflictException':
             print(
                 '[ConflictException] A network policy with this name already exists.')
+            return None
         elif error.response['Error']['Code'] == 'ServiceQuotaExceededException':
             print(f'[ServiceQuotaExceededException] Too many network policies. Consider cleaning up unused policies.')
             print(f'You can list policies with: aws opensearchserverless list-security-policies --type network')
+            return None
         else:
-            raise error
+            print(f"Error creating network policy: {error}")
+            return None
 
 
 def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID):
@@ -184,11 +190,14 @@ def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID
     except botocore.exceptions.ClientError as error:
         if error.response['Error']['Code'] == 'ConflictException':
             print('[ConflictException] An access policy with this name already exists.')
+            return None
         elif error.response['Error']['Code'] == 'ServiceQuotaExceededException':
             print(f'[ServiceQuotaExceededException] Too many access policies. Consider cleaning up unused policies.')
             print(f'You can list policies with: aws opensearchserverless list-access-policies --type data')
+            return None
         else:
-            raise error
+            print(f"Error creating access policy: {error}")
+            return None
 
         
 
@@ -308,9 +317,28 @@ def main(collection_name,IAM_USER,ACCOUNT_ID):
     access_policy_name = f'{collection_name}-access-policy'
     
     print(f"\nCreating policies for collection: {collection_name}")
-    createEncryptionPolicy(client, encryption_policy_name, collection_name)
-    createNetworkPolicy(client, network_policy_name, collection_name)
-    createAccessPolicy(client, access_policy_name, collection_name,IAM_USER,ACCOUNT_ID)
+    
+    # Create policies and check they were created successfully
+    encryption_result = createEncryptionPolicy(client, encryption_policy_name, collection_name)
+    if not encryption_result:
+        print("ERROR: Failed to create or find encryption policy. Cannot proceed.")
+        return
+    
+    network_result = createNetworkPolicy(client, network_policy_name, collection_name)
+    if not network_result:
+        print("ERROR: Failed to create or find network policy. Cannot proceed.")
+        return
+        
+    access_result = createAccessPolicy(client, access_policy_name, collection_name,IAM_USER,ACCOUNT_ID)
+    if not access_result:
+        print("ERROR: Failed to create or find access policy. Cannot proceed.")
+        return
+    
+    print("All policies created/verified successfully!")
+    
+    # Wait a moment for policies to propagate
+    print("Waiting 10 seconds for policies to propagate...")
+    time.sleep(10)
     
     print(f"\nCreating collection: {collection_name}")
     try:
