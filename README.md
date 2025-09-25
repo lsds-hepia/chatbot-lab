@@ -98,10 +98,12 @@ Either use the AWS CLI or the console. Give the security group a good name.
 
 3.Create a `config.ini` file under Part2 folder with the following content:
 
-    [aws]
-    aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
-    aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY
-    region = us-east-1
+    [azure]
+    azure_openai_endpoint = https://your-resource-name.openai.azure.com/
+    azure_openai_api_key = YOUR_AZURE_OPENAI_API_KEY
+    azure_api_version = 2024-02-01
+    chat_deployment_name = gpt-4o
+    embedding_deployment_name = text-embedding-ada-002
 
     [opensearch]
     endpoint = YOUR_OPENSEARCH_ENDPOINT

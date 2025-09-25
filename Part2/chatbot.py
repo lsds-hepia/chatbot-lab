@@ -1,10 +1,11 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
-import boto3
 import streamlit as st
-from langchain_aws import BedrockEmbeddings, ChatBedrock
-from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
+from openai import AzureOpenAI
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+from opensearchpy import OpenSearch, RequestsHttpConnection
 from langchain_core.prompts import PromptTemplate
 import configparser
+import os
 
 def load_config():
     config = configparser.ConfigParser()
@@ -13,22 +14,22 @@ def load_config():
 
 config = load_config()
 
-aws_access_key_id = config.get('aws', 'aws_access_key_id')
-aws_secret_access_key = config.get('aws', 'aws_secret_access_key')
-region = config.get('aws', 'region')
+# Azure OpenAI configuration
+azure_endpoint = config.get('azure', 'azure_openai_endpoint')
+azure_api_key = config.get('azure', 'azure_openai_api_key')
+azure_api_version = config.get('azure', 'azure_api_version', fallback='2024-02-01')
+chat_deployment_name = config.get('azure', 'chat_deployment_name')
+embedding_deployment_name = config.get('azure', 'embedding_deployment_name')
+
+# OpenSearch configuration (keeping this for vector search)
 endpoint = config.get('opensearch', 'endpoint')
 index_name = config.get('opensearch', 'index_name')
 
-# Embeddings Client
-bedrock_client = boto3.client(service_name="bedrock-runtime", 
-    aws_access_key_id=aws_access_key_id,
-    aws_secret_access_key=aws_secret_access_key, region_name=region)
-
-# Create a boto3 session for langchain_aws models
-boto3_session = boto3.Session(
-    aws_access_key_id=aws_access_key_id,
-    aws_secret_access_key=aws_secret_access_key,
-    region_name=region
+# Azure OpenAI Client
+azure_client = AzureOpenAI(
+    azure_endpoint=azure_endpoint,
+    api_key=azure_api_key,
+    api_version=azure_api_version
 )
 
 # configuring streamlit page settings
@@ -45,49 +46,42 @@ st.title("Chat with your lecture")
 
 
 
-# OpenSearch Client
-def ospensearch_client(endpoint):
-    session = boto3.Session(
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        region_name=region
-    )
-    awsauth = AWSV4SignerAuth(session.get_credentials(), region, 'aoss')
-    client = OpenSearch(
-    hosts=[{'host': endpoint, 'port': 443}],
-    http_auth=awsauth,
-    use_ssl=True,
-    verify_certs=True,
-    connection_class=RequestsHttpConnection,
-    )
+# OpenSearch Client (assuming you're using a basic auth or no auth OpenSearch)
+def opensearch_client(endpoint, username=None, password=None):
+    if username and password:
+        # Basic authentication
+        client = OpenSearch(
+            hosts=[{'host': endpoint, 'port': 443}],
+            http_auth=(username, password),
+            use_ssl=True,
+            verify_certs=True,
+            connection_class=RequestsHttpConnection,
+        )
+    else:
+        # No authentication (for development/testing)
+        client = OpenSearch(
+            hosts=[{'host': endpoint, 'port': 9200}],  # Default OpenSearch port
+            use_ssl=False,
+            verify_certs=False,
+            connection_class=RequestsHttpConnection,
+        )
     return client
 
-def get_embedding(question, bedrock_client):
-    # Try multiple model IDs in order of preference (same as vectorization script)
-    model_ids = [
-        "amazon.titan-embed-text-v2:0",    # Latest version
-        "amazon.titan-embed-text-v1",      # Previous version  
-        "cohere.embed-english-v3"          # Alternative
-    ]
-    
-    embeddings_model = None
-    for model_id in model_ids:
-        try:
-            embeddings_model = BedrockEmbeddings(
-                model_id=model_id, 
-                region_name=region,
-                credentials_profile_name=None
-            )
-            # Set the boto3 session client
-            embeddings_model.client = boto3_session.client("bedrock-runtime")
-            print(f"Using embedding model: {model_id}")
-            break
-        except Exception as e:
-            print(f"Model {model_id} not available: {e}")
-            continue
-    
-    if embeddings_model is None:
-        raise ValueError("No embedding model available. Please check your Bedrock model access.")
+def get_embedding(question, azure_client=None):
+    """Generate embeddings using Azure OpenAI"""
+    try:
+        embeddings_model = AzureOpenAIEmbeddings(
+            azure_endpoint=azure_endpoint,
+            api_key=azure_api_key,
+            api_version=azure_api_version,
+            azure_deployment=embedding_deployment_name,
+        )
+        print(f"Using Azure OpenAI embedding model: {embedding_deployment_name}")
+        embedding = embeddings_model.embed_query(question)
+        return embedding
+    except Exception as e:
+        print(f"Error generating embedding: {e}")
+        raise ValueError("Failed to generate embedding with Azure OpenAI")
     
     embedding = embeddings_model.embed_query(question)
     return embedding
@@ -129,42 +123,26 @@ def prepare_prompt(question, context):
     return prompt_formatted_str
 
 def generate_answer(prompt):
-    # Try multiple Claude model IDs in order of preference
-    model_ids = [
-        # claude 4
-        # "anthropic.claude-4-0-20241022-v2:0",  # Latest Claude 4
-        # "anthropic.claude-4-0-20240620-v1:0",  # Previous Claude 4
-        # claude 3.5
-        # "anthropic.claude-3-5-sonnet-20241022-v2:0",  # Latest Claude 3.5 Sonnet
-        "anthropic.claude-3-5-sonnet-20240620-v1:0",  # Previous Claude 3.5 Sonnet
-        # "anthropic.claude-3-sonnet-20240229-v1:0",    # Claude 3 Sonnet
-        # "anthropic.claude-3-haiku-20240307-v1:0"      # Claude 3 Haiku (faster/cheaper)
-    ]
-    
-    for model_id in model_ids:
-        try:
-            model = ChatBedrock(
-                model_id=model_id, 
-                model_kwargs={"temperature": 0.1},
-                region_name=region,
-                credentials_profile_name=None
-            )
-            # Set the boto3 session for the model
-            model.client = boto3_session.client("bedrock-runtime")
-            print(f"Using chat model: {model_id}")
-            answer = model.invoke(prompt)
-            return answer
-        except Exception as e:
-            print(f"Model {model_id} not available: {e}")
-            continue
-    
-    # If no model works, raise an error
-    raise ValueError("No Claude model available. Please check your Bedrock model access.")
+    """Generate answer using Azure OpenAI"""
+    try:
+        model = AzureChatOpenAI(
+            azure_endpoint=azure_endpoint,
+            api_key=azure_api_key,
+            api_version=azure_api_version,
+            azure_deployment=chat_deployment_name,
+            temperature=0.1
+        )
+        print(f"Using Azure OpenAI chat model: {chat_deployment_name}")
+        answer = model.invoke(prompt)
+        return answer
+    except Exception as e:
+        print(f"Error generating answer: {e}")
+        raise ValueError("Failed to generate answer with Azure OpenAI")
 
 
 def main():
 
-    oss_client= ospensearch_client(endpoint)
+    oss_client = opensearch_client(endpoint)
 
     # initialize chat session in streamlit if not already present
     if "chat_history" not in st.session_state:
@@ -187,7 +165,7 @@ def main():
         # Generate and display answer
         print(user_prompt)
  
-        embed_question= get_embedding(user_prompt,bedrock_client)
+        embed_question = get_embedding(user_prompt)
         print(embed_question)
         sim_results = similarity_search(oss_client, embed_question, index_name)
         context = [i['_source']['text'] for i in sim_results]
