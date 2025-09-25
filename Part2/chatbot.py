@@ -14,6 +14,38 @@ def load_config():
 
 config = load_config()
 
+# Validate configuration
+def validate_config():
+    """Validate that all required configuration is present"""
+    required_azure_keys = [
+        'azure_openai_endpoint', 
+        'azure_openai_api_key', 
+        'chat_deployment_name', 
+        'embedding_deployment_name'
+    ]
+    
+    missing_keys = []
+    for key in required_azure_keys:
+        try:
+            value = config.get('azure', key)
+            if not value or value.strip() == '':
+                missing_keys.append(key)
+        except:
+            missing_keys.append(key)
+    
+    if missing_keys:
+        print(f"ERROR: Missing configuration keys: {missing_keys}")
+        print("Please check your config.ini file")
+        return False
+    
+    print("Configuration validation successful")
+    return True
+
+# Validate config on startup
+if not validate_config():
+    st.error("Configuration error. Please check your config.ini file.")
+    st.stop()
+
 # Azure OpenAI configuration
 azure_endpoint = config.get('azure', 'azure_openai_endpoint')
 azure_api_key = config.get('azure', 'azure_openai_api_key')
@@ -80,11 +112,20 @@ def get_embedding(question, azure_client=None):
         embedding = embeddings_model.embed_query(question)
         return embedding
     except Exception as e:
-        print(f"Error generating embedding: {e}")
-        raise ValueError("Failed to generate embedding with Azure OpenAI")
-    
-    embedding = embeddings_model.embed_query(question)
-    return embedding
+        print(f"Detailed error generating embedding: {e}")
+        print(f"Azure endpoint: {azure_endpoint}")
+        print(f"Deployment name: {embedding_deployment_name}")
+        print(f"API version: {azure_api_version}")
+        
+        # Try to provide more helpful error information
+        if "NotFound" in str(e):
+            print("ERROR: Deployment not found. Check your embedding deployment name.")
+        elif "Unauthorized" in str(e):
+            print("ERROR: Authentication failed. Check your API key.")
+        elif "InvalidRequestError" in str(e):
+            print("ERROR: Invalid request. Check your endpoint URL and API version.")
+        
+        raise ValueError(f"Failed to generate embedding with Azure OpenAI: {e}")
 
 def similarity_search(client, embed_query, index_name):
     query_body = {
@@ -136,11 +177,52 @@ def generate_answer(prompt):
         answer = model.invoke(prompt)
         return answer
     except Exception as e:
-        print(f"Error generating answer: {e}")
-        raise ValueError("Failed to generate answer with Azure OpenAI")
+        print(f"Detailed error generating answer: {e}")
+        print(f"Azure endpoint: {azure_endpoint}")
+        print(f"Chat deployment name: {chat_deployment_name}")
+        print(f"API version: {azure_api_version}")
+        
+        if "NotFound" in str(e):
+            print("ERROR: Chat deployment not found. Check your chat deployment name.")
+        elif "Unauthorized" in str(e):
+            print("ERROR: Authentication failed. Check your API key.")
+        elif "InvalidRequestError" in str(e):
+            print("ERROR: Invalid request. Check your endpoint URL and API version.")
+        
+        raise ValueError(f"Failed to generate answer with Azure OpenAI: {e}")
+
+
+def test_azure_connection():
+    """Test Azure OpenAI connection"""
+    try:
+        print("Testing Azure OpenAI connection...")
+        print(f"Endpoint: {azure_endpoint}")
+        print(f"API Version: {azure_api_version}")
+        print(f"Embedding deployment: {embedding_deployment_name}")
+        print(f"Chat deployment: {chat_deployment_name}")
+        
+        # Test embedding
+        test_embedding = get_embedding("test")
+        print(f"Embedding test successful. Dimension: {len(test_embedding)}")
+        
+        # Test chat
+        test_answer = generate_answer("Say 'hello'")
+        print(f"Chat test successful. Response: {test_answer.content[:50]}...")
+        
+        return True
+    except Exception as e:
+        print(f"Connection test failed: {e}")
+        return False
 
 
 def main():
+
+    # Test connection on first run
+    if 'connection_tested' not in st.session_state:
+        st.session_state.connection_tested = True
+        if not test_azure_connection():
+            st.error("Failed to connect to Azure OpenAI. Please check your configuration.")
+            return
 
     oss_client = opensearch_client(endpoint)
 
