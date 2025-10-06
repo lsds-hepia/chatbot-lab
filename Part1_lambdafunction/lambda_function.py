@@ -1,6 +1,6 @@
 import boto3
 import os
-import PyPDF2
+import tempfile
 import io
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFDirectoryLoader
@@ -72,7 +72,7 @@ def store_embeddings(embeddings, texts, meta_data, host, awsauth, index_name):
         verify_certs=True,
         connection_class=RequestsHttpConnection,
         index_name=index_name,
-        bulk_size=100,
+        bulk_size=500,
         timeout = 120,
         max_chunk_bytes=10485760  # 10MB max chunk size
 )
@@ -106,23 +106,17 @@ def lambda_handler(event, context):
         connection_class=RequestsHttpConnection,
     )
 
-    # Processing the document
-    pdf_bytes = io.BytesIO(response['Body'].read())
+     # Download PDF to Lambda /tmp
+    tmp_path = os.path.join(tempfile.gettempdir(), os.path.basename(key))
+    print(tmp_path)
+    s3_client.download_file(bucket_name, key, tmp_path)
 
-    # Using PyPDF2 to read the PDFobject
-    reader = PyPDF2.PdfReader(pdf_bytes)
-    number_of_pages = len(reader.pages)
-    docs = []
+    # Load PDF with LangChain loader
+    loader = PyPDFDirectoryLoader(os.path.dirname(tmp_path))
+    docs = loader.load()
 
-    for i, page in enumerate(reader.pages):
-        text = page.extract_text()
-        if text:
-            docs.append(Document(page_content=text, metadata={"page": i + 1}))
-    print(docs)
 
-    pdf_bytes.close() 
-   
-    chunks = split_text(docs, 100, 100)
+    chunks = split_text(docs, 1000, 100)
     create_index(opensearch_client, index_name)
     embeddings = generate_embeddings(bedrock_client, chunks)
     texts = [chunk.page_content for chunk in chunks]
