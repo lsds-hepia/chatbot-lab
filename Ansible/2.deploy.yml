@@ -9,16 +9,9 @@
 
   tasks:
 
-    - name: Get instance metadata to retrieve user_id
-      amazon.aws.ec2_instance_info:
-        filters:
-          "private-ip-address": "{{ ansible_default_ipv4.address }}"
-      delegate_to: localhost
-      register: instance_info
-
-    - name: Set user_id from instance tags
+    - name: Set user_id based on inventory position
       set_fact:
-        user_id: "{{ instance_info.instances[0].tags.user_id }}"
+        user_id: "user{{ groups['my_hosts'].index(inventory_hostname) + 1 }}"
 
     - name: Generate user-specific config.ini from template
       template:

@@ -1,4 +1,4 @@
 key_name: "abirchebbi"
-ami_id: "ami-0042cee713cc4125a"
+ami_id: "ami-0786042ec32e51b9a"
 security_group: "sg-0bb78d31956b174bc"
 instance_name: "chatbot" 

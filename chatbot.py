@@ -41,8 +41,8 @@ st.subheader("Get instant insights from your business documents")
 # Add document upload section
 st.sidebar.title("📄 Upload Business Documents")
 uploaded_files = st.sidebar.file_uploader(
-    "Upload reports, presentations, or any business documents",
-    type=['pdf', 'txt', 'docx'],
+    "Upload PDF reports, presentations, or any business documents",
+    type=['pdf'],
     accept_multiple_files=True
 )
 

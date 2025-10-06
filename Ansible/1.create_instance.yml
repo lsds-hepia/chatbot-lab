@@ -8,7 +8,7 @@
   vars:
     #instance_type: t4g.micro
     instance_type: t2.micro
-    instance_count: 30
+    instance_count: 45
 
   tasks:
     - name: EC2 instances creation
@@ -37,4 +37,6 @@
       copy:
         content: "{{ ec2.results | map(attribute='instances') | flatten | map(attribute='instance_id') | join('\n') }}"
         dest: ./instance_ids.txt
+
+
 
