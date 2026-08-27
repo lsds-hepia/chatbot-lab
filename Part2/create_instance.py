@@ -56,7 +56,7 @@ def build_user_data(config_content):
     return script.replace("{CONFIG}", config_content.strip())
 
 
-def create_instance(ami_id, key_pair_name, security_group_id, instance_type, iam_instance_profile):
+def create_instance(ami_id, key_pair_name, security_group_id, instance_type):
 
     # Load the config content
     config_content = get_config_content('config.ini')
@@ -65,7 +65,7 @@ def create_instance(ami_id, key_pair_name, security_group_id, instance_type, iam
     script = build_user_data(config_content)
     encoded_script = base64.b64encode(script.encode()).decode('utf-8')
 
-    kwargs = dict(
+    instance = ec2.create_instances(
         ImageId=ami_id,
         MinCount=1,
         MaxCount=1,
@@ -78,17 +78,13 @@ def create_instance(ami_id, key_pair_name, security_group_id, instance_type, iam
             'Tags': [{'Key': 'Name', 'Value': 'chatbot-lab'}]
         }],
     )
-    if iam_instance_profile:
-        kwargs['IamInstanceProfile'] = {'Name': iam_instance_profile}
-
-    instance = ec2.create_instances(**kwargs)
     return instance
 
 
-def main(ami_id, key_pair_name, security_group_id, instance_type, iam_instance_profile):
+def main(ami_id, key_pair_name, security_group_id, instance_type):
 
     print("Creating an EC2 instance")
-    instance = create_instance(ami_id, key_pair_name, security_group_id, instance_type, iam_instance_profile)
+    instance = create_instance(ami_id, key_pair_name, security_group_id, instance_type)
     inst = instance[0]
     print("Instance created with ID:", inst.id)
 
@@ -107,8 +103,5 @@ if __name__ == '__main__':
     parser.add_argument("--key_pair_name", required=True, help="The name of the key pair to use for the instance")
     parser.add_argument("--security_group_id", required=True, help="The ID of the security group to use for the instance")
     parser.add_argument("--instance_type", default="t3.micro", help="EC2 instance type (default: t3.micro)")
-    parser.add_argument("--iam_instance_profile", default=None,
-                        help="Optional. Name of an IAM instance profile provided by your instructor, "
-                             "used instead of the AWS keys in config.ini.")
     args = parser.parse_args()
-    main(args.ami_id, args.key_pair_name, args.security_group_id, args.instance_type, args.iam_instance_profile)
+    main(args.ami_id, args.key_pair_name, args.security_group_id, args.instance_type)

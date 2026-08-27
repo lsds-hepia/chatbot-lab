@@ -128,10 +128,6 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 
    `config.ini` is gitignored. Never commit it.
 
-   > If your instructor has provided an IAM instance profile, you can leave the two keys
-   > empty and pass `--iam_instance_profile [Name]` in the next step instead. Creating the
-   > role yourself requires IAM permissions that student accounts normally do not have.
-
 ### Step 2: Launching the Instance
 
 Use the provided `create_instance.py` script to deploy your EC2 instance with the essential
@@ -158,7 +154,6 @@ Where:
 - **[AMI_ID]**: The AMI provided by your instructor.
 - **[KeyPairName]**: The name of the key_pair created earlier.
 - **[SecurityGroupID]**: The id of the security group created earlier.
-- **[InstanceProfileName]**: optional, only if your instructor provided one.
 
 Optional: `--instance_type` (default `t3.micro`).
 
