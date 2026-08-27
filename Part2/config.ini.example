@@ -1,0 +1,19 @@
+# Copy this file to config.ini and fill in your values.
+# config.ini is gitignored -- never commit real credentials.
+
+[aws]
+region = us-east-1
+
+# Leave these two EMPTY if you launch the instance with --iam_instance_profile
+# (recommended). Fill them in only when running the app on your own laptop.
+aws_access_key_id =
+aws_secret_access_key =
+
+[opensearch]
+endpoint = YOUR_OPENSEARCH_ENDPOINT
+index_name = YOUR_INDEX_NAME
+
+[bedrock]
+# Get the exact IDs from Bedrock > Model access in YOUR region.
+embed_model_id = amazon.titan-embed-text-v2:0
+chat_model_id = PUT_A_CURRENT_CLAUDE_MODEL_ID_HERE

@@ -127,17 +127,20 @@ def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID
         
 
         
-def waitForCollectionCreation(client,collection_name):
-    """Waits for the collection to become active"""
-    time.sleep(30)
-    response = client.batch_get_collection(
-            names=[collection_name])
-    print('\nCollection successfully created:')
-    print(response["collectionDetails"])
-    # Extract the collection endpoint from the response
-    host = (response['collectionDetails'][0]['collectionEndpoint'])
-    final_host = host.replace("https://", "")
-    return final_host
+def waitForCollectionCreation(client, collection_name):
+    """Waits for the collection to become active."""
+    for attempt in range(60):
+        time.sleep(10)
+        response = client.batch_get_collection(names=[collection_name])
+        details = response.get('collectionDetails', [])
+        if details and details[0]['status'] == 'ACTIVE':
+            print('\nCollection successfully created:')
+            print(details)
+            host = details[0]['collectionEndpoint']
+            return host.replace("https://", "")
+        status = details[0]['status'] if details else 'CREATING'
+        print(f"  waiting for collection to become ACTIVE (status: {status})...")
+    raise SystemExit("Collection did not become ACTIVE in 10 minutes; check the console.")
 
 
 def main(collection_name,IAM_USER,ACCOUNT_ID):
@@ -155,8 +158,8 @@ def main(collection_name,IAM_USER,ACCOUNT_ID):
 
 if __name__== "__main__":
     parser = argparse.ArgumentParser(description="Create collection")
-    parser.add_argument("--collection_name", help="The name of the collection")
-    parser.add_argument("--iam_user", help="The iam user")
-    parser.add_argument("--account_id", help="The account id")
+    parser.add_argument("--collection_name", required=True, help="The name of the collection")
+    parser.add_argument("--iam_user", required=True, help="The iam user")
+    parser.add_argument("--account_id", required=True, help="The account id")
     args = parser.parse_args()
     main(args.collection_name,args.iam_user,args.account_id)

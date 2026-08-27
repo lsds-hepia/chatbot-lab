@@ -1,4 +1,11 @@
-langchain-community
-pypdf
-opensearch-py
-boto3
+# Core AWS SDK
+boto3>=1.35
+
+# LangChain: PDF loading, chunking, Bedrock and the vector store
+langchain-aws>=1.0
+langchain-text-splitters>=1.0
+langchain-community>=0.4
+
+# PDF parsing + OpenSearch client
+pypdf>=5.0
+opensearch-py>=2.6

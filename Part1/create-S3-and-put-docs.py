@@ -1,22 +1,37 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
 
-
-
 import boto3
+import botocore
 import os
 import argparse
 
 
-def create_bucket(s3_client, bucket_name):
+def create_bucket(s3_client, bucket_name, region):
     """ Create an S3 bucket """
     print("Creating Bucket")
-    response = s3_client.create_bucket(Bucket=bucket_name)
-    print(response)
+    try:
+        if region == 'us-east-1':
+            response = s3_client.create_bucket(Bucket=bucket_name)
+        else:
+            response = s3_client.create_bucket(
+                Bucket=bucket_name,
+                CreateBucketConfiguration={'LocationConstraint': region}
+            )
+        print(response)
+    except botocore.exceptions.ClientError as error:
+        code = error.response['Error']['Code']
+        if code in ('BucketAlreadyOwnedByYou', 'BucketAlreadyExists'):
+            print(f"Bucket '{bucket_name}' already exists, reusing it.")
+        else:
+            raise
     print()
 
 
 # Function to write files to S3
 def write_files(s3_client, directory, bucket):
+    if not os.path.isdir(directory):
+        raise SystemExit(f"Local path '{directory}' does not exist.")
+    count = 0
     for filename in os.listdir(directory):
         if filename.endswith(".pdf"):  # Check if the file is a PDF
             file_path = os.path.join(directory, filename)
@@ -28,16 +43,22 @@ def write_files(s3_client, directory, bucket):
                     Key=filename
                 )
                 print(f"{filename} uploaded successfully.")
+                count += 1
+    if count == 0:
+        raise SystemExit(f"No PDF files found in '{directory}'. Nothing was uploaded.")
+    print(f"\nUploaded {count} PDF file(s).")
 
-def main(bucket_name, local_dir):
-    s3_client = boto3.client('s3')
-    create_bucket(s3_client, bucket_name)
+
+def main(bucket_name, local_dir, region):
+    s3_client = boto3.client('s3', region_name=region)
+    create_bucket(s3_client, bucket_name, region)
     write_files(s3_client, local_dir, bucket_name)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Upload PDF files to an S3 bucket")
-    parser.add_argument("--bucket_name", help="The name of the S3 bucket to which the files will be uploaded")
-    parser.add_argument("--local_path", help="The name of the folder to put the pdf files")
+    parser.add_argument("--bucket_name", required=True, help="The name of the S3 bucket to which the files will be uploaded")
+    parser.add_argument("--local_path", required=True, help="The folder containing the PDF files to upload")
+    parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     args = parser.parse_args()
-    main(args.bucket_name, args.local_path)
-
+    main(args.bucket_name, args.local_path, args.region)

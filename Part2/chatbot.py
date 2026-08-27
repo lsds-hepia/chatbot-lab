@@ -1,8 +1,7 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
 import boto3
 import streamlit as st
-from langchain_community.embeddings import BedrockEmbeddings
-from langchain_community.chat_models import BedrockChat
+from langchain_aws import BedrockEmbeddings, ChatBedrock
 from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_core.prompts import PromptTemplate
 import configparser
@@ -14,16 +13,29 @@ def load_config():
 
 config = load_config()
 
-aws_access_key_id = config.get('aws', 'aws_access_key_id')
-aws_secret_access_key = config.get('aws', 'aws_secret_access_key')
-region = config.get('aws', 'region')
+region = config.get('aws', 'region', fallback='us-east-1')
 endpoint = config.get('opensearch', 'endpoint')
 index_name = config.get('opensearch', 'index_name')
+embed_model_id = config.get('bedrock', 'embed_model_id', fallback='amazon.titan-embed-text-v2:0')
+chat_model_id = config.get('bedrock', 'chat_model_id')
+
+# Credentials: leave the keys empty in config.ini when the EC2 instance has an
+# IAM role. Fill them in only to run the app on your own machine.
+aws_access_key_id = config.get('aws', 'aws_access_key_id', fallback='').strip()
+aws_secret_access_key = config.get('aws', 'aws_secret_access_key', fallback='').strip()
+
+if aws_access_key_id and aws_secret_access_key:
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=region,
+    )
+else:
+    # Uses the IAM role attached to the instance
+    session = boto3.Session(region_name=region)
 
 # Embeddings Client
-bedrock_client = boto3.client(service_name="bedrock-runtime", 
-    aws_access_key_id=aws_access_key_id,
-    aws_secret_access_key=aws_secret_access_key, region_name=region)
+bedrock_client = session.client(service_name="bedrock-runtime")
 
 # configuring streamlit page settings
 st.set_page_config(
@@ -37,27 +49,20 @@ st.set_page_config(
 st.title("Chat with your lecture")
 
 
-
-
 # OpenSearch Client
-def ospensearch_client(endpoint):
-    session = boto3.Session(
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        region_name=region
-    )
+def opensearch_client(endpoint):
     awsauth = AWSV4SignerAuth(session.get_credentials(), region, 'aoss')
     client = OpenSearch(
-    hosts=[{'host': endpoint, 'port': 443}],
-    http_auth=awsauth,
-    use_ssl=True,
-    verify_certs=True,
-    connection_class=RequestsHttpConnection,
+        hosts=[{'host': endpoint, 'port': 443}],
+        http_auth=awsauth,
+        use_ssl=True,
+        verify_certs=True,
+        connection_class=RequestsHttpConnection,
     )
     return client
 
 def get_embedding(question, bedrock_client):
-    embeddings_model = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1", client=bedrock_client)
+    embeddings_model = BedrockEmbeddings(model_id=embed_model_id, client=bedrock_client)
     embedding = embeddings_model.embed_query(question)
     return embedding
 
@@ -98,14 +103,18 @@ def prepare_prompt(question, context):
     return prompt_formatted_str
 
 def generate_answer(prompt):
-    model = BedrockChat(model_id="anthropic.claude-v2", model_kwargs={"temperature": 0.1}, client=bedrock_client)
+    model = ChatBedrock(
+        model_id=chat_model_id,
+        model_kwargs={"temperature": 0.1},
+        client=bedrock_client,
+    )
     answer = model.invoke(prompt)
-    return answer
+    return answer.content
 
 
 def main():
 
-    oss_client= ospensearch_client(endpoint)
+    oss_client = opensearch_client(endpoint)
 
     # initialize chat session in streamlit if not already present
     if "chat_history" not in st.session_state:
@@ -125,23 +134,17 @@ def main():
     # add user's message to chat and display it
         st.chat_message("user").markdown(user_prompt)
         st.session_state.chat_history.append({"role": "user", "content": user_prompt})
-        # Generate and display answer
-        print(user_prompt)
- 
-        embed_question= get_embedding(user_prompt,bedrock_client)
-        print(embed_question)
-        sim_results = similarity_search(oss_client, embed_question, index_name)
-        context = [i['_source']['text'] for i in sim_results]
-        print(context)
-        prompt = prepare_prompt(user_prompt, context)
-        print(prompt)
-        answer = generate_answer(prompt)
-        st.session_state.chat_history.append({"role": "system", "content": answer})
-        for message in st.session_state.chat_history[-1:]:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+
+        with st.spinner("Searching your lecture notes..."):
+            embed_question = get_embedding(user_prompt, bedrock_client)
+            sim_results = similarity_search(oss_client, embed_question, index_name)
+            context = [i['_source']['text'] for i in sim_results]
+            prompt = prepare_prompt(user_prompt, context)
+            answer = generate_answer(prompt)
+
+        st.session_state.chat_history.append({"role": "assistant", "content": answer})
+        with st.chat_message("assistant"):
+            st.markdown(answer)
 
 if __name__== "__main__":
     main()
-
- 
