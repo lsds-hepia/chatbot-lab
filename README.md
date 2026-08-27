@@ -159,7 +159,7 @@ Optional: `--instance_type` (default `t3.micro`).
 
 The script waits for the instance to start and prints its public IP.
 
-## Step 3: Accessing the application
+### Step 3: Accessing the application
 
 Once the app starts, navigate to `http://[public_ip_address_of_yourVM]:8501` in your web
 browser to start interacting with your chatbot.
@@ -172,7 +172,227 @@ ssh -i [YourKey.pem] ubuntu@[public_ip]
 sudo cat /var/log/chatbot-lab.log
 ```
 
-## Step 4: Clean up (do not skip)
+### Step 4: Stop the instance
+
+Terminate the EC2 instance from the console when you are done with Part 2. Do not delete
+the S3 bucket or the vector DB yet -- Part 3 reuses them.
+
+
+## Part 3: Containerizing the chatbot
+
+In Part 2 you deployed the application by putting it on a server you had to create,
+configure and connect to. In Part 3 you deploy exactly the same application as a
+**container image**, and let AWS run it for you.
+
+### What you will learn
+
+- How a `Dockerfile` describes an application and all of its dependencies
+- How an image registry (Amazon ECR) stores versioned, immutable artifacts
+- How configuration is injected at run time instead of being baked into the image
+- What a managed container service creates on your behalf, and what it costs
+- How to operate an application you cannot SSH into
+
+### Prerequisites
+
+You need Docker installed on your machine (or on the VM from Part 1):
+
+```
+docker --version
+```
+
+You also need the S3 bucket, the vector DB and the index from Part 1. The chatbot is the
+same; only the way it is packaged and deployed changes.
+
+> **Instructor note:** an ECS Express Mode service needs a **task execution role** and an
+> **infrastructure role** (AWS managed policies `AmazonECSTaskExecutionRolePolicy` and
+> `AmazonECSInfrastructureRoleforExpressGatewayServices`). The console offers to create
+> them, which requires IAM permissions. If student accounts cannot create IAM roles, create
+> both roles once beforehand and give students the names, along with `iam:PassRole` on them.
+
+### Step 1: Read the Dockerfile
+
+Open `Part3/Dockerfile` before building anything. Note two things:
+
+1. `requirements.txt` is copied and installed **before** `chatbot.py` is copied. Docker
+   caches each instruction as a layer, so editing the application code does not re-run the
+   slow `pip install`. You will verify this in Step 3.
+2. Nothing in the image contains your endpoint, your index name or your AWS keys. Compare
+   `Part3/chatbot.py` with `Part2/chatbot.py`:
+
+   ```
+   diff Part2/chatbot.py Part3/chatbot.py
+   ```
+
+   Part 2 reads `config.ini`. Part 3 reads environment variables. **Why can a container
+   image not contain config.ini?** Because the image is a shared, immutable artifact -- it
+   gets pushed to a registry, and anyone who can pull it can read every layer inside it.
+
+### Step 2: Build and run the image locally
+
+```
+cd Part3
+docker build --platform linux/amd64 -t chatbot-lab .
+```
+
+> `--platform linux/amd64` is required. AWS Fargate runs `X86_64` by default, so an image
+> built on an Apple Silicon Mac (arm64) will start and immediately die with
+> `exec format error`. This is one of the most common container deployment mistakes.
+
+Run it locally, passing the configuration as environment variables:
+
+```
+docker run -p 8501:8501 \
+  -e AWS_REGION=us-east-1 \
+  -e AWS_ACCESS_KEY_ID=[YourKeyId] \
+  -e AWS_SECRET_ACCESS_KEY=[YourSecret] \
+  -e OPENSEARCH_ENDPOINT=[YourVectorDBEndpoint] \
+  -e OPENSEARCH_INDEX=[Index_name] \
+  -e BEDROCK_CHAT_MODEL_ID=[YourChatModelId] \
+  chatbot-lab
+```
+
+Open `http://localhost:8501`. The same application you deployed on a VM in Part 2 now runs
+in a container on your own machine, with no virtualenv and no installation steps.
+
+### Step 3: Watch the layer cache
+
+Add a blank line to `Part3/chatbot.py`, then build again:
+
+```
+docker build --platform linux/amd64 -t chatbot-lab .
+```
+
+Look at the output: the `pip install` step says `CACHED` and the build finishes in
+seconds. Now move the `COPY chatbot.py .` line **above** the `COPY requirements.txt .`
+line and rebuild. What happens, and why? Put the Dockerfile back when you are done.
+
+### Step 4: Push the image to Amazon ECR
+
+An image on your laptop is not deployable. Push it to a registry.
+
+```
+aws ecr create-repository --repository-name chatbot-lab-[YourName] --region us-east-1
+
+aws ecr get-login-password --region us-east-1 \
+  | docker login --username AWS --password-stdin [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com
+
+docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v1
+docker push [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v1
+```
+
+Note the tag `v1`. You are going to push a `v2` later. **Tags are how you version and roll
+back a deployment** -- there is no equivalent to this in the Part 2 workflow.
+
+### Step 5: Deploy with ECS Express Mode
+
+1. Open the ECS console and choose **Express mode** in the navigation pane.
+2. For **Image URI**, choose **Browse ECR images** and select your `v1` image.
+3. Choose the **Task execution role** and **Infrastructure role**.
+4. Open **Additional configurations** and set:
+   - **Container port**: `8501` (the default is 80; Streamlit does not listen there)
+   - **Health check path**: `/_stcore/health` (Streamlit's health endpoint)
+   - **Environment variables**: `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+     `OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`, `BEDROCK_CHAT_MODEL_ID`
+5. Choose **Create**, then open the **Application URL** when the deployment finishes.
+
+You gave AWS an image and six settings. Note that the URL is **HTTPS** -- you did not
+request a certificate or configure a load balancer.
+
+> **Discussion:** you have just typed your secret key into a form. The **Value type** field
+> next to each environment variable offers **Secret** instead of **Environment variable**,
+> which reads the value from AWS Secrets Manager at start-up. Why is that better? Who can
+> read a task definition?
+
+### Step 6: Find out what AWS actually built
+
+Express Mode made deployment easy by hiding the infrastructure. Go and find it. Everything
+it created lives in your own account. Locate each of the following in the console and write
+down its name:
+
+| Resource | Where to look |
+|---|---|
+| ECS cluster | ECS > Clusters |
+| Task definition (CPU, memory, env vars) | ECS > Task definitions |
+| Application Load Balancer | EC2 > Load Balancers |
+| Target group and its health checks | EC2 > Target Groups |
+| Security groups (service and load balancer) | EC2 > Security Groups |
+| Auto scaling policy | ECS > your service > Health and metrics |
+| CloudWatch log group | CloudWatch > Log groups |
+| TLS certificate | AWS Certificate Manager |
+
+**Draw the architecture** from what you found: where does a request from your browser go,
+and what does it pass through before reaching the container? Compare that drawing with
+Part 2, where a request went straight to a public IP on port 8501.
+
+### Step 7: Operate it without SSH
+
+There is no SSH into a Fargate task. Open **CloudWatch > Log groups** and find your
+service's log group. This is where `print()` output and Streamlit's own logs now go.
+
+Now break it on purpose:
+
+1. Edit the `BEDROCK_CHAT_MODEL_ID` environment variable to an invalid value and update
+   the service.
+2. Ask the chatbot a question.
+3. Find the error in CloudWatch and identify the cause **without** connecting to any server.
+
+Then set it back.
+
+### Step 8: Scaling, and a problem to discover
+
+In the ECS console, set the **minimum number of tasks** to 2 and update the service.
+
+Once two tasks are running, open the application URL, ask a question, then open the same
+URL in a private browser window and ask another. Compare the chat histories.
+
+**What happened, and why?** The AWS documentation describes Express Mode as being for
+*stateless* applications. Look at `chatbot.py`: `st.session_state.chat_history` lives in
+the memory of one task. The load balancer sends your two browser sessions to different
+tasks, and neither knows about the other's conversation.
+
+Discuss: what would you have to change to run this application on more than one task?
+Where should the chat history live instead?
+
+Set the minimum back to 1 when you are done.
+
+### Step 9: Ship a new version
+
+Change the title in `Part3/chatbot.py`, then build, tag as `v2` and push:
+
+```
+docker build --platform linux/amd64 -t chatbot-lab .
+docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v2
+docker push [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v2
+```
+
+Update the service to point at `v2` and watch the deployment. The old container is replaced
+by a new one; nothing is patched in place. Then point it back at `v1` -- you have just
+rolled back a release.
+
+### Step 10: Compare the two deployments
+
+Fill this in from your own experience of Parts 2 and 3:
+
+| | Part 2 (EC2) | Part 3 (container) |
+|---|---|---|
+| What you had to create by hand | | |
+| Where the app's dependencies are defined | | |
+| How you deploy a change | | |
+| How you read the logs | | |
+| What happens if the app crashes | | |
+| How you run a second copy | | |
+| Is it reachable over HTTPS? | | |
+| What you pay for when nobody is using it | | |
+
+For the last row: Fargate bills for vCPU and memory per second while a task runs, and the
+load balancer bills continuously. Work out roughly what your service costs per month if you
+leave it running, and compare that with a `t3.micro`. Then answer: **can this service scale
+to zero, and what would happen to a request that arrived while it was at zero?**
+
+
+## Clean up (do not skip)
+
+Delete everything in this order:
 
 ```
 cd Part1
@@ -180,5 +400,12 @@ python3 delete-vector-db.py --collection_name [Name_of_collection]
 python3 delete-s3.py --bucket_name [YourBucketName]
 ```
 
-Then terminate the EC2 instance from the console. The OpenSearch Serverless collection is
-the expensive item -- it keeps billing until it is deleted.
+Then, in the console:
+
+- Delete the **ECS Express Mode service** (this also removes the load balancer, target
+  group, certificate and scaling policy it created)
+- Delete the **ECR repository** holding your images
+- Terminate the **EC2 instance** from Part 2 if it is still running
+
+The OpenSearch Serverless collection and the load balancer are the two items that keep
+billing whether or not you use them.
