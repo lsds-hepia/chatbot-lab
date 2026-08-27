@@ -4,10 +4,9 @@
 [aws]
 region = us-east-1
 
-# Leave these two EMPTY if you launch the instance with --iam_instance_profile
-# (recommended). Fill them in only when running the app on your own laptop.
-aws_access_key_id =
-aws_secret_access_key =
+# Leave these empty only if your instructor gave you an IAM instance profile.
+aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
+aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY
 
 [opensearch]
 endpoint = YOUR_OPENSEARCH_ENDPOINT

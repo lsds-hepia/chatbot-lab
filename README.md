@@ -109,19 +109,13 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
     - For inbound rules: you need to allow SSH traffic, HTTP/HTTPs traffic and open port 8501 used by the application.
     - Outbound Rules: Allow all traffic.
 
-3. **Create an IAM role for the instance (recommended)**: create an IAM role with an
-   instance profile granting Bedrock (`bedrock:InvokeModel`) and OpenSearch Serverless
-   (`aoss:APIAccessAll`) access. Passing it via `--iam_instance_profile` means no
-   long-lived AWS keys ever have to be written onto the instance.
-
-4. **Create the config file**: copy `config.ini.example` to `config.ini` and fill it in:
+3. **Create the config file**: copy `config.ini.example` to `config.ini` and fill it in:
 
     ```ini
     [aws]
     region = us-east-1
-    # Leave both keys EMPTY when using --iam_instance_profile
-    aws_access_key_id =
-    aws_secret_access_key =
+    aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
+    aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY
 
     [opensearch]
     endpoint = YOUR_OPENSEARCH_ENDPOINT
@@ -133,6 +127,10 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
     ```
 
    `config.ini` is gitignored. Never commit it.
+
+   > If your instructor has provided an IAM instance profile, you can leave the two keys
+   > empty and pass `--iam_instance_profile [Name]` in the next step instead. Creating the
+   > role yourself requires IAM permissions that student accounts normally do not have.
 
 ### Step 2: Launching the Instance
 
@@ -153,14 +151,14 @@ startup configurations.
 
 Run the following command to create your instance:
 
-`python3 create_instance.py --ami_id [AMI_ID] --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID] --iam_instance_profile [InstanceProfileName]`
+`python3 create_instance.py --ami_id [AMI_ID] --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID]`
 
 Where:
 
 - **[AMI_ID]**: The AMI provided by your instructor.
 - **[KeyPairName]**: The name of the key_pair created earlier.
 - **[SecurityGroupID]**: The id of the security group created earlier.
-- **[InstanceProfileName]**: (recommended) the IAM instance profile from Step 1.3.
+- **[InstanceProfileName]**: optional, only if your instructor provided one.
 
 Optional: `--instance_type` (default `t3.micro`).
 

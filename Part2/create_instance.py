@@ -108,7 +108,7 @@ if __name__ == '__main__':
     parser.add_argument("--security_group_id", required=True, help="The ID of the security group to use for the instance")
     parser.add_argument("--instance_type", default="t3.micro", help="EC2 instance type (default: t3.micro)")
     parser.add_argument("--iam_instance_profile", default=None,
-                        help="Name of an IAM instance profile granting Bedrock + OpenSearch Serverless "
-                             "access. Recommended: use this instead of putting AWS keys in config.ini.")
+                        help="Optional. Name of an IAM instance profile provided by your instructor, "
+                             "used instead of the AWS keys in config.ini.")
     args = parser.parse_args()
     main(args.ami_id, args.key_pair_name, args.security_group_id, args.instance_type, args.iam_instance_profile)

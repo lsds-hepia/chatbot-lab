@@ -19,8 +19,8 @@ index_name = config.get('opensearch', 'index_name')
 embed_model_id = config.get('bedrock', 'embed_model_id', fallback='amazon.titan-embed-text-v2:0')
 chat_model_id = config.get('bedrock', 'chat_model_id')
 
-# Credentials: leave the keys empty in config.ini when the EC2 instance has an
-# IAM role. Fill them in only to run the app on your own machine.
+# Credentials: normally taken from config.ini. Leave them empty only when the
+# instance has an IAM role, and boto3 will pick the role up automatically.
 aws_access_key_id = config.get('aws', 'aws_access_key_id', fallback='').strip()
 aws_secret_access_key = config.get('aws', 'aws_secret_access_key', fallback='').strip()
 
