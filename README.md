@@ -21,7 +21,6 @@ index the vectors in **OpenSearch Serverless**, and serve a **Streamlit** chat U
     Default output format : json
     ```
 
-
 3. Ensure python is installed: **python 3.10 or higher** (required by langchain-core 1.x, langchain-aws, streamlit and boto3). Ubuntu 24.04 ships 3.12, so the stock VM is fine.
 
 4. **Create a virtual environment.** Ubuntu 24.04 refuses system-wide `pip install`
@@ -35,6 +34,36 @@ index the vectors in **OpenSearch Serverless**, and serve a **Streamlit** chat U
 
    Re-run `source ~/chatbotlab/bin/activate` in every new SSH session. Once it is active,
    `pip3` and `python3` refer to the venv.
+
+   You do **not** need to run `aws configure` again inside the venv. Credentials live in
+   `~/.aws/credentials`, outside the environment, so boto3 finds them from anywhere. Check
+   with:
+
+    ```
+    aws sts get-caller-identity
+    ```
+
+   This prints your account ID and IAM user ARN -- both are needed in Part 1 Step 2. If it
+   fails, your AWS CLI is not configured yet.
+
+   **Use the same region everywhere.** Every script takes `--region` and defaults to
+   `us-east-1`. If your course uses a different region, pass `--region` to *all* of them.
+
+5. **Install Docker** (used in Part 3):
+
+    ```
+    sudo apt update && sudo apt install -y docker.io
+    sudo usermod -aG docker $USER
+    ```
+
+   Log out and back in so the group change takes effect, then check it works:
+
+    ```
+    docker --version
+    docker run --rm hello-world
+    ```
+
+   On macOS, install Docker Desktop instead and make sure it is running.
 
 ## Part 1:
 
@@ -265,20 +294,11 @@ configure and connect to. In Part 3 you deploy exactly the same application as a
 
 ### Prerequisites
 
-You need Docker installed on your machine (or on the VM from Part 1):
+Check that Docker is installed and running (step 5 of *Set up environment*):
 
 ```
 docker --version
 ```
-
-If it is not installed on the Ubuntu VM:
-
-```
-sudo apt update && sudo apt install -y docker.io
-sudo usermod -aG docker $USER
-```
-
-Log out and back in so the group change takes effect, then check `docker --version` again.
 
 You also need the S3 bucket, the vector DB and the index from Part 1. The chatbot is the
 same; only the way it is packaged and deployed changes.
