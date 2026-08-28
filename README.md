@@ -344,7 +344,7 @@ aws ecr create-repository --repository-name [Repo] --region [REGION]
 
 Where:
 
-- **[Repo]**: the name of the repository to create, for example `chatbot-lab-[YourName]`.
+- **[Repo]**: the name of the repository to create, for example `chatbot-lab-[GroupNumber]`.
 - **[REGION]**: the AWS region, `us-east-1` for this lab.
 
 The output contains a **`repositoryUri`**: the address of your repository, which the next
@@ -362,13 +362,6 @@ Where:
   `[YourAccount_ID].dkr.ecr.[REGION].amazonaws.com`. You log in to this address, and you
   tag and push to `[RegistryAddress]/[Repo]`.
 
-To print the full URI again later:
-
-```
-aws ecr describe-repositories --repository-names [Repo] --region [REGION] \
-  --query 'repositories[0].repositoryUri' --output text
-```
-
 **2. Log Docker in to the registry.** ECR is private, so Docker has to authenticate.
 
 ```
@@ -378,64 +371,25 @@ aws ecr get-login-password --region [REGION] \
 
 `get-login-password` exchanges your AWS credentials for a temporary token, valid 12 hours,
 and the pipe hands it straight to Docker. `--password-stdin` reads it from the pipe rather
-than the command line, for the same reason you did not pass your keys with `-e` earlier: a
-password given as an argument ends up in your shell history and in `ps`.
+than the command line.
 
-You should see `Login Succeeded`. Do this again if you come back to the lab tomorrow -- the
-token expires.
+You should see `Login Succeeded`. 
 
-> **Why a token at all, when the AWS CLI is already configured?** Because Docker is not an
-> AWS tool. It speaks the Docker Registry protocol, which authenticates with an ordinary
-> username and password; it knows nothing about IAM, SigV4 or `~/.aws/credentials`. So
-> `get-login-password` uses your AWS credentials on Docker's behalf and returns something
-> Docker does understand. You are using your AWS config -- just one step removed.
->
-> You can remove that step with the **ECR credential helper**, which lets Docker fetch a
-> token from your AWS credentials by itself:
->
-> ```
-> sudo apt install -y amazon-ecr-credential-helper     # Ubuntu
-> brew install docker-credential-helper-ecr            # macOS
-> ```
->
-> Then add this to `~/.docker/config.json`:
->
-> ```json
-> {
->   "credHelpers": {
->     "[RegistryAddress]": "ecr-login"
->   }
-> }
-> ```
->
-> After that `docker push` works with no `docker login` at all, and never expires.
 
-**3. Tag the image with its destination.** A Docker image does not know where it belongs:
-the registry address is part of its *name*.
+**3. Tag the image with its destination.** 
 
 ```
 docker tag chatbot-lab:latest [RegistryAddress]/[Repo]:v1
 ```
 
 This copies nothing. It gives the image you already built a second name meaning "this
-belongs in that repository, as version `v1`". Run `docker images` and you will see both
-names against the same image ID.
+belongs in that repository, as version `v1`".
 
 **4. Upload it.**
 
 ```
 docker push [RegistryAddress]/[Repo]:v1
 ```
-
-Push sends the layers one at a time and skips any the registry already has, which is why
-the first push is slow and later ones are quick: only the layer holding your changed
-`chatbot.py` has to travel.
-
-Note the tag `v1`. You are going to push a `v2` later. **Tags are how you version and roll
-back a deployment** -- there is no equivalent in the Part 2 workflow.
-
-> If you get lost, the ECR console shows these commands filled in with your own account ID:
-> open your repository and choose **View push commands**.
 
 ### Step 3: Deploy with ECS Express Mode
 
@@ -452,10 +406,7 @@ back a deployment** -- there is no equivalent in the Part 2 workflow.
 You gave AWS an image and six settings. Note that the URL is **HTTPS** -- you did not
 request a certificate or configure a load balancer.
 
-> **Discussion:** you have just typed your secret key into a form. The **Value type** field
-> next to each environment variable offers **Secret** instead of **Environment variable**,
-> which reads the value from AWS Secrets Manager at start-up. Why is that better? Who can
-> read a task definition?
+
 
 ### Step 4: Find out what AWS actually built
 
