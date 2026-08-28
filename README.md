@@ -17,14 +17,11 @@ index the vectors in **OpenSearch Serverless**, and serve a **Streamlit** chat U
     ```
     AWS Access Key ID     : [your access key]
     AWS Secret Access Key : [your secret key]
-    Default region name   : eu-central-1
+    Default region name   : us-east-1
     Default output format : json
     ```
 
-   **This lab uses `eu-central-1` (Frankfurt).** Every script defaults to that region. Use
-   the same region here, in `config.ini` and in the Part 3 commands -- the S3 bucket, the
-   vector database and the Bedrock calls must all be in one region or they cannot see each
-   other.
+
 3. Ensure python is installed: **python 3.10 or higher** (required by langchain-core 1.x, langchain-aws, streamlit and boto3). Ubuntu 24.04 ships 3.12, so the stock VM is fine.
 
 4. **Create a virtual environment.** Ubuntu 24.04 refuses system-wide `pip install`
@@ -38,20 +35,6 @@ index the vectors in **OpenSearch Serverless**, and serve a **Streamlit** chat U
 
    Re-run `source ~/chatbotlab/bin/activate` in every new SSH session. Once it is active,
    `pip3` and `python3` refer to the venv.
-
-   You do **not** need to run `aws configure` again inside the venv. Credentials live in
-   `~/.aws/credentials`, outside the environment, so boto3 finds them from anywhere. Check
-   with:
-
-    ```
-    aws sts get-caller-identity
-    ```
-
-   This prints your account ID and IAM user ARN -- both are needed in Part 1 Step 2. If it
-   fails, your AWS CLI is not configured yet.
-
-   **Use the same region everywhere.** Every script takes `--region` and defaults to
-   `eu-central-1`. If your course uses a different region, pass `--region` to *all* of them.
 
 ## Part 1:
 
@@ -70,7 +53,7 @@ Where placeholders:
 - **[YourBucketName]**: The name for the new S3 bucket to be created.
 - **[PathToYourPDFFiles]**: The local directory path where the PDF files are stored.
 
-Optional: `--region` (default `eu-central-1`).
+Optional: `--region` (default `us-east-1`).
 
 ### Step 2: Vector Store Creation
 
@@ -83,7 +66,7 @@ Where:
 - **[YourIAM_user]** : the IAM user of your account.
 - **[YourAccount_ID]** : the ACCOUNT ID of your account.
 
-Optional: `--region` (default `eu-central-1`).
+Optional: `--region` (default `us-east-1`).
 
 You will find YourIAM_user and YourAccount_ID when you click on your account ID in the top
 right-hand corner of the AWS Amazon portal, or by running `aws sts get-caller-identity`.
@@ -106,10 +89,10 @@ Open **Bedrock > Model access** in your region and check that an embedding model
 `amazon.titan-embed-text-v2:0` is granted; request access if it is not.
 
 Model availability differs between regions, so **copy the exact model ID from the console**
-rather than assuming the default below exists in yours. In European regions many models are
-offered only as cross-region inference profiles, whose IDs carry an `eu.` prefix (for
-example `eu.anthropic.…` instead of `anthropic.…`). If the console shows an ID starting
-with `eu.`, use it exactly as shown.
+rather than assuming the default below exists in yours. Some models are offered only as
+cross-region inference profiles, whose IDs carry a region prefix (for example
+`us.anthropic.…` instead of `anthropic.…`). Use the ID exactly as the console shows it,
+prefix included.
 
 Then run:
 
@@ -158,7 +141,7 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 
     ```ini
     [aws]
-    region = eu-central-1
+    region = us-east-1
     aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
     aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY
 
@@ -300,7 +283,7 @@ Run it locally, passing the configuration as environment variables:
 
 ```
 docker run -p 8501:8501 \
-  -e AWS_REGION=eu-central-1 \
+  -e AWS_REGION=us-east-1 \
   -e AWS_ACCESS_KEY_ID=[YourKeyId] \
   -e AWS_SECRET_ACCESS_KEY=[YourSecret] \
   -e OPENSEARCH_ENDPOINT=[YourVectorDBEndpoint] \
@@ -329,13 +312,13 @@ line and rebuild. What happens, and why? Put the Dockerfile back when you are do
 An image on your laptop is not deployable. Push it to a registry.
 
 ```
-aws ecr create-repository --repository-name chatbot-lab-[YourName] --region eu-central-1
+aws ecr create-repository --repository-name chatbot-lab-[YourName] --region us-east-1
 
-aws ecr get-login-password --region eu-central-1 \
-  | docker login --username AWS --password-stdin [YourAccount_ID].dkr.ecr.eu-central-1.amazonaws.com
+aws ecr get-login-password --region us-east-1 \
+  | docker login --username AWS --password-stdin [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com
 
-docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.eu-central-1.amazonaws.com/chatbot-lab-[YourName]:v1
-docker push [YourAccount_ID].dkr.ecr.eu-central-1.amazonaws.com/chatbot-lab-[YourName]:v1
+docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v1
+docker push [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v1
 ```
 
 Note the tag `v1`. You are going to push a `v2` later. **Tags are how you version and roll
@@ -419,8 +402,8 @@ Change the title in `Part3/chatbot.py`, then build, tag as `v2` and push:
 
 ```
 docker build --platform linux/amd64 -t chatbot-lab .
-docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.eu-central-1.amazonaws.com/chatbot-lab-[YourName]:v2
-docker push [YourAccount_ID].dkr.ecr.eu-central-1.amazonaws.com/chatbot-lab-[YourName]:v2
+docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v2
+docker push [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v2
 ```
 
 Update the service to point at `v2` and watch the deployment. The old container is replaced

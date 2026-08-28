@@ -59,6 +59,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Upload PDF files to an S3 bucket")
     parser.add_argument("--bucket_name", required=True, help="The name of the S3 bucket to which the files will be uploaded")
     parser.add_argument("--local_path", required=True, help="The folder containing the PDF files to upload")
-    parser.add_argument("--region", default="eu-central-1", help="AWS region (default: eu-central-1)")
+    parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     args = parser.parse_args()
     main(args.bucket_name, args.local_path, args.region)

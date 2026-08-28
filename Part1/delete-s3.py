@@ -34,6 +34,6 @@ def main(bucket_name, region):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Delete the lab S3 bucket and its contents")
     parser.add_argument("--bucket_name", required=True, help="The name of the S3 bucket to delete")
-    parser.add_argument("--region", default="eu-central-1", help="AWS region (default: eu-central-1)")
+    parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     args = parser.parse_args()
     main(args.bucket_name, args.region)

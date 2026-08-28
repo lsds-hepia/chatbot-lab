@@ -72,6 +72,6 @@ def main(collection_name, region):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Delete the vector DB collection and its policies")
     parser.add_argument("--collection_name", required=True, help="The name of the collection to delete")
-    parser.add_argument("--region", default="eu-central-1", help="AWS region (default: eu-central-1)")
+    parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     args = parser.parse_args()
     main(args.collection_name, args.region)

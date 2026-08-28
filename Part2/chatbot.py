@@ -13,7 +13,7 @@ def load_config():
 
 config = load_config()
 
-region = config.get('aws', 'region', fallback='eu-central-1')
+region = config.get('aws', 'region', fallback='us-east-1')
 endpoint = config.get('opensearch', 'endpoint')
 index_name = config.get('opensearch', 'index_name')
 embed_model_id = config.get('bedrock', 'embed_model_id', fallback='amazon.titan-embed-text-v2:0')
