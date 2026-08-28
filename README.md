@@ -304,7 +304,7 @@ Run:
 
 ```
 cd Part3
-docker build --platform linux/amd64 -t chatbot-lab .
+docker build --platform linux/amd64 --provenance=false -t chatbot-lab .
 ```
 
 Copy `env.example` to `.env` and fill it in:
@@ -391,6 +391,10 @@ belongs in that repository, as version `v1`".
 docker push [RegistryAddress]/[Repo]:v1
 ```
 
+`--provenance=false` in the build keeps ECR to one image per push. Without it Docker
+also pushes a build-metadata attestation and an index, which show up as extra untagged
+rows.
+
 ### Step 3: Deploy with ECS Express Mode
 
 1. Open the ECS console and choose **Express mode** in the navigation pane.
@@ -465,7 +469,7 @@ Set the minimum back to 1 when you are done.
 Change the title in `Part3/chatbot.py`, then build, tag as `v2` and push:
 
 ```
-docker build --platform linux/amd64 -t chatbot-lab .
+docker build --platform linux/amd64 --provenance=false -t chatbot-lab .
 docker tag chatbot-lab:latest [RegistryAddress]/[Repo]:v2
 docker push [RegistryAddress]/[Repo]:v2
 ```
