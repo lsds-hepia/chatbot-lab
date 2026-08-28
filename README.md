@@ -399,10 +399,10 @@ rows.
 
 1. Open the ECS console and choose **Express mode** in the navigation pane.
 2. For **Image URI**, choose **Browse ECR images** and select your `v1` image.
-3. For **Task execution role** and **Infrastructure role**, choose **Create new role** in
-   each dropdown. There is no default: the first time, neither role exists in the account,
-   and AWS creates them when you click **Create** at the end. On later deployments they
-   already exist, so pick them from the list instead.
+3. Leave **Task execution role** and **Infrastructure role** as they are. On a fresh
+   account the console says *"A default role `ecsTaskExecutionRole` will be created
+   automatically"* and does it for you when you click **Create**. Once the roles exist you
+   can select them here on later deployments.
 
    - the **task execution role** lets ECS pull your image from ECR and write the logs
      (policy `AmazonECSTaskExecutionRolePolicy`)
@@ -411,7 +411,8 @@ rows.
      (policy `AmazonECSInfrastructureRoleforExpressGatewayServices`)
 
    These two let *ECS* act on your behalf. The **Task role** in the next step is different:
-   that one is what *your container* uses to call Bedrock and OpenSearch.
+   that one is what *your container* uses to call Bedrock and OpenSearch, and it is not
+   created for you.
 4. Open **Additional configurations** and set:
    - **Container port**: `8501` (the default is 80; Streamlit does not listen there)
    - **Health check path**: `/_stcore/health` (Streamlit's health endpoint)
