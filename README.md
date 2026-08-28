@@ -53,9 +53,7 @@ Where placeholders:
 - **[YourBucketName]**: The name for the new S3 bucket to be created.
 - **[PathToYourPDFFiles]**: The local directory path where the PDF files are stored.
 
-> S3 bucket names are **globally unique across all AWS accounts**, so short names like
-> `test-yourname` are usually already taken by a stranger. Add your account ID to be safe,
-> for example `chatbot-lab-[YourName]-[YourAccount_ID]`.
+
 
 Optional: `--region` (default `us-east-1`).
 
@@ -88,9 +86,13 @@ The script performs the following actions:
 After setting up the S3 bucket and Vector DB, we process the PDF files to generate and
 store embeddings in the vector database.
 
-This is the first step that calls Bedrock, so you need an **embedding model** enabled.
-Open **Bedrock > Model access** in your region and check that an embedding model such as
-`amazon.titan-embed-text-v2:0` is granted; request access if it is not.
+This is the first step that calls Bedrock, so you need the ID of an **embedding model**.
+Open **Bedrock > Model catalog** in your region and find one, for example
+`amazon.titan-embed-text-v2:0`.
+
+You do **not** need to request access. The old *Model access* page has been retired:
+serverless foundation models are enabled automatically the first time they are invoked in
+your account.
 
 Model availability differs between regions, so **copy the exact model ID from the console**
 rather than assuming the default below exists in yours. Some models are offered only as
@@ -160,9 +162,19 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 
    `config.ini` is gitignored. Never commit it.
 
-   For `chat_model_id` you need a **Claude** model enabled in **Bedrock > Model access**.
-   Copy the exact model ID from the console -- it is region-specific. `endpoint` and
-   `index_name` are the values from Part 1.
+   For `chat_model_id`, find a **Claude** model in **Bedrock > Model catalog** and copy its
+   exact model ID -- it is region-specific. `endpoint` and `index_name` are the values
+   from Part 1.
+
+   > If nobody in your account has invoked an Anthropic model before, the first call may
+   > require you to submit use case details. Do this once now: open the model in the
+   > **Bedrock playground** and send it any message. It is much easier to deal with there
+   > than as a failure inside the chatbot.
+
+   > Models served from AWS Marketplace need a user with Marketplace permissions to invoke
+   > them once, which then enables them account-wide. Your account administrator can also
+   > restrict models with IAM policies or SCPs, so if a model works in the playground but
+   > not from the lab, check with them.
 
 ### Step 2: Launching the Instance
 
