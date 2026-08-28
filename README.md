@@ -118,7 +118,6 @@ This is the first step that calls Bedrock, so you need the ID of an **embedding 
 Open **Bedrock > Model catalog** in your region and find one, for example
 `amazon.titan-embed-text-v2:0`.
 
-
 Model availability differs between regions. You can list what your account can actually
 use from the command line:
 
@@ -142,7 +141,6 @@ Where:
 
 Optional: `--region`, `--embed_model_id`, and `--download_path`.
 
-
 The vectorise-store.py script will:
 
 * Download PDF files from the S3 bucket.
@@ -150,7 +148,6 @@ The vectorise-store.py script will:
 * Generate embeddings from the chunks.
 * Create an index in the vector DB, sized to match your embedding model.
 * Store these embeddings in the OpenSearch Vector DB.
-
 
 ## Part 2:
 
@@ -277,7 +274,6 @@ sudo cat /var/log/chatbot-lab.log
 Terminate the EC2 instance from the console when you are done with Part 2. Do not delete
 the S3 bucket or the vector DB yet -- Part 3 reuses them.
 
-
 ## Part 3: Containerizing the chatbot
 
 In Part 2 you deployed the application by putting it on a server you had to create,
@@ -302,12 +298,6 @@ docker --version
 You also need the S3 bucket, the vector DB and the index from Part 1. The chatbot is the
 same; only the way it is packaged and deployed changes.
 
-
-
-
-
-
-
 ### Step 1: Build and run the image locally
 
 Run:
@@ -317,18 +307,10 @@ cd Part3
 docker build --platform linux/amd64 -t chatbot-lab .
 ```
 
-
 Copy `env.example` to `.env` and fill in your two values from Part 1:
 
 ```
 cp env.example .env
-```
-
-```
-AWS_REGION=us-east-1
-OPENSEARCH_ENDPOINT=[YourVectorDBEndpoint]
-OPENSEARCH_INDEX=[Index_name]
-BEDROCK_CHAT_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0
 ```
 
 Notice there are no AWS keys in it. Instead of copying credentials into the container,
@@ -344,46 +326,50 @@ docker run -p 8501:8501 \
 Open `http://localhost:8501`. The same application you deployed on a VM in Part 2 now runs
 in a container on your own machine, with no virtualenv and no installation steps.
 
-
 ### Step 2: Push the image to Amazon ECR
 
-An image on your laptop is not deployable. It has to live in a registry that AWS can pull
-from. Amazon ECR is that registry.
-
-First set four variables. Everything after this reuses them, so you never type your account
-ID by hand:
-
-```
-export REGION=us-east-1
-export REPO=chatbot-lab-[YourName]
-export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export ECR=$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
-
-echo $ECR/$REPO
-```
-
-The last line should print something like
-`123456789012.dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-abir`. That address is how AWS
-names images:
-
-```
-[account].dkr.ecr.[region].amazonaws.com/[repository]:[tag]
-```
-
-These variables live in your current terminal only. If you open a new one, run the four
-`export` lines again.
+The image has to live in Amazon ECR, following these steps:
 
 **1. Create the repository.** One repository holds all the versions of one application.
 Unlike an S3 bucket, the name only has to be unique inside your own account and region.
 
 ```
-aws ecr create-repository --repository-name $REPO --region $REGION
+aws ecr create-repository --repository-name [Repo] --region [REGION]
+```
+
+The output contains a **`repositoryUri`**. That is the address of your repository, and the
+next three commands all need it. It is built from your account and region:
+
+```
+[YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]
+ |                |   |   |                      |
+ your AWS account |   |   the region             the repository you just created
+                  ECR service
+```
+
+Two parts of it are used separately:
+
+- the **registry address**, `[YourAccount_ID].dkr.ecr.[REGION].amazonaws.com` -- what you log in to
+- the **full repository URI**, the same thing plus `/[Repo]` -- what you tag and push
+
+`[YourAccount_ID]` is your 12-digit AWS account number. If you do not know it:
+
+```
+aws sts get-caller-identity --query Account --output text
+```
+
+You can also print the whole URI back at any time:
+
+```
+aws ecr describe-repositories --repository-names [Repo] --region [REGION] \
+  --query 'repositories[0].repositoryUri' --output text
 ```
 
 **2. Log Docker in to the registry.** ECR is private, so Docker has to authenticate.
 
 ```
-aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR
+aws ecr get-login-password --region [REGION] \
+  | docker login --username AWS --password-stdin [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com
 ```
 
 `get-login-password` exchanges your AWS credentials for a temporary token, valid 12 hours,
@@ -413,7 +399,7 @@ token expires.
 > ```json
 > {
 >   "credHelpers": {
->     "<account_id>.dkr.ecr.us-east-1.amazonaws.com": "ecr-login"
+>     "[YourAccount_ID].dkr.ecr.[REGION].amazonaws.com": "ecr-login"
 >   }
 > }
 > ```
@@ -424,7 +410,7 @@ token expires.
 the registry address is part of its *name*.
 
 ```
-docker tag chatbot-lab:latest $ECR/$REPO:v1
+docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]:v1
 ```
 
 This copies nothing. It gives the image you already built a second name meaning "this
@@ -434,7 +420,7 @@ names against the same image ID.
 **4. Upload it.**
 
 ```
-docker push $ECR/$REPO:v1
+docker push [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]:v1
 ```
 
 Push sends the layers one at a time and skips any the registry already has, which is why
@@ -525,11 +511,9 @@ Change the title in `Part3/chatbot.py`, then build, tag as `v2` and push:
 
 ```
 docker build --platform linux/amd64 -t chatbot-lab .
-docker tag chatbot-lab:latest $ECR/$REPO:v2
-docker push $ECR/$REPO:v2
+docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]:v2
+docker push [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]:v2
 ```
-
-(If you opened a new terminal since Step 2, set the `export` variables again first.)
 
 Watch the push output: most layers say `Layer already exists` and only the last one
 uploads. That is the Dockerfile layer ordering paying off.
@@ -557,7 +541,6 @@ For the last row: Fargate bills for vCPU and memory per second while a task runs
 load balancer bills continuously. Work out roughly what your service costs per month if you
 leave it running, and compare that with a `t3.micro`. Then answer: **can this service scale
 to zero, and what would happen to a request that arrived while it was at zero?**
-
 
 ## Clean up (do not skip)
 
