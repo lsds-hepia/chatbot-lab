@@ -22,11 +22,24 @@ index the vectors in **OpenSearch Serverless**, and serve a **Streamlit** chat U
 2. AWS CLI: Ensure AWS CLI is installed and configured on the VM you just created (refer to the setup guide provided in Session 1).
 3. Ensure python is installed: **python 3.10 or higher** (required by langchain-core 1.x, langchain-aws, streamlit and boto3). Ubuntu 24.04 ships 3.12, so the stock VM is fine.
 
+4. **Create a virtual environment.** Ubuntu 24.04 refuses system-wide `pip install`
+   (`error: externally-managed-environment`), so all the Python steps below run inside a venv:
+
+    ```
+    sudo apt update && sudo apt install -y python3-venv
+    python3 -m venv ~/chatbotlab
+    source ~/chatbotlab/bin/activate
+    ```
+
+   Re-run `source ~/chatbotlab/bin/activate` in every new SSH session. Once it is active,
+   `pip3` and `python3` refer to the venv.
+
 ## Part 1:
 
 Go to the Part1 folder: `cd Part1`
 
-Install required python libraries listed in the 'requirements.txt': `pip3 install -r requirements.txt`
+With the virtual environment active, install the required python libraries:
+`pip3 install -r requirements.txt`
 
 ### Step 1: Object storage Creation
 
@@ -99,7 +112,8 @@ The vectorise-store.py script will:
 
 Go to the Part2 folder: `cd Part2`
 
-Install required python libraries listed in the 'requirements.txt': `pip3 install -r requirements.txt`
+With the virtual environment active, install the required python libraries:
+`pip3 install -r requirements.txt`
 
 Before deploying the chatbot on an EC2 instance, complete the following preliminary steps:
 
@@ -199,6 +213,15 @@ You need Docker installed on your machine (or on the VM from Part 1):
 ```
 docker --version
 ```
+
+If it is not installed on the Ubuntu VM:
+
+```
+sudo apt update && sudo apt install -y docker.io
+sudo usermod -aG docker $USER
+```
+
+Log out and back in so the group change takes effect, then check `docker --version` again.
 
 You also need the S3 bucket, the vector DB and the index from Part 1. The chatbot is the
 same; only the way it is packaged and deployed changes.
