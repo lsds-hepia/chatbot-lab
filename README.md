@@ -307,11 +307,16 @@ cd Part3
 docker build --platform linux/amd64 -t chatbot-lab .
 ```
 
-Copy `env.example` to `.env` and fill in your two values from Part 1:
+Copy `env.example` to `.env` and fill it in:
 
 ```
 cp env.example .env
 ```
+
+Where:
+
+- **[YourVectorDBEndpoint]**: the vector database endpoint from Part 1, Step 2.
+- **[Index_name]**: the index name you used in Part 1, Step 3.
 
 Notice there are no AWS keys in it. Instead of copying credentials into the container,
 mount the ones you already have, read-only:
@@ -337,26 +342,32 @@ Unlike an S3 bucket, the name only has to be unique inside your own account and 
 aws ecr create-repository --repository-name [Repo] --region [REGION]
 ```
 
-The output contains a **`repositoryUri`**. That is the address of your repository, and the
-next three commands all need it. It is built from your account and region:
+Where:
+
+- **[Repo]**: the name of the repository to create, for example `chatbot-lab-[YourName]`.
+- **[REGION]**: the AWS region, `us-east-1` for this lab.
+
+The output contains a **`repositoryUri`**: the address of your repository, which the next
+three commands need. It has the form:
 
 ```
 [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]
- |                |   |   |                      |
- your AWS account |   |   the region             the repository you just created
-                  ECR service
 ```
 
-Two parts of it are used separately:
+Where:
 
-- the **registry address** -- what you log in to. The commands below call this
-  **`[RegistryAddress]`**, and it means:
+- **[YourAccount_ID]**: your 12-digit AWS account number. Print it with
+  `aws sts get-caller-identity --query Account --output text`.
+- **[RegistryAddress]**: everything before the repository name, that is
+  `[YourAccount_ID].dkr.ecr.[REGION].amazonaws.com`. You log in to this address, and you
+  tag and push to `[RegistryAddress]/[Repo]`.
 
-  ```
-  [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com
-  ```
+To print the full URI again later:
 
-- the **full repository URI** -- what you tag and push, which is `[RegistryAddress]/[Repo]`
+```
+aws ecr describe-repositories --repository-names [Repo] --region [REGION] \
+  --query 'repositories[0].repositoryUri' --output text
+```
 
 **2. Log Docker in to the registry.** ECR is private, so Docker has to authenticate.
 
