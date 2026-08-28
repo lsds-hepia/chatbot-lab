@@ -394,6 +394,32 @@ password given as an argument ends up in your shell history and in `ps`.
 You should see `Login Succeeded`. Do this again if you come back to the lab tomorrow -- the
 token expires.
 
+> **Why a token at all, when the AWS CLI is already configured?** Because Docker is not an
+> AWS tool. It speaks the Docker Registry protocol, which authenticates with an ordinary
+> username and password; it knows nothing about IAM, SigV4 or `~/.aws/credentials`. So
+> `get-login-password` uses your AWS credentials on Docker's behalf and returns something
+> Docker does understand. You are using your AWS config -- just one step removed.
+>
+> You can remove that step with the **ECR credential helper**, which lets Docker fetch a
+> token from your AWS credentials by itself:
+>
+> ```
+> sudo apt install -y amazon-ecr-credential-helper     # Ubuntu
+> brew install docker-credential-helper-ecr            # macOS
+> ```
+>
+> Then add this to `~/.docker/config.json`:
+>
+> ```json
+> {
+>   "credHelpers": {
+>     "<account_id>.dkr.ecr.us-east-1.amazonaws.com": "ecr-login"
+>   }
+> }
+> ```
+>
+> After that `docker push` works with no `docker login` at all, and never expires.
+
 **3. Tag the image with its destination.** A Docker image does not know where it belongs:
 the registry address is part of its *name*.
 
