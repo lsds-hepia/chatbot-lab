@@ -26,12 +26,17 @@ def create_aws_clients(region, endpoint):
     awsauth = AWSV4SignerAuth(credentials, region, 'aoss')
 
     ## OpenSearch client
+    ## A new collection is slow to answer its first requests, so allow more than
+    ## the 10 second default and retry instead of failing.
     opensearch_client = OpenSearch(
         hosts=[{'host': endpoint, 'port': 443}],
         http_auth=awsauth,
         use_ssl=True,
         verify_certs=True,
         connection_class=RequestsHttpConnection,
+        timeout=300,
+        max_retries=10,
+        retry_on_timeout=True,
     )
 
     return s3_client, bedrock_client, awsauth, opensearch_client
@@ -121,7 +126,10 @@ def store_embeddings(embeddings, texts, meta_data, embeddings_model, host, awsau
         verify_certs=True,
         connection_class=RequestsHttpConnection,
         index_name=index_name,
-        bulk_size=1000
+        bulk_size=1000,
+        timeout=300,
+        max_retries=10,
+        retry_on_timeout=True,
     )
     return docsearch
 

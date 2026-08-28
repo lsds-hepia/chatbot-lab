@@ -42,6 +42,9 @@ def opensearch_client(endpoint):
         use_ssl=True,
         verify_certs=True,
         connection_class=RequestsHttpConnection,
+        timeout=60,
+        max_retries=3,
+        retry_on_timeout=True,
     )
     return client
 

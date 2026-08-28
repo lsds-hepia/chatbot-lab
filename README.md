@@ -113,10 +113,6 @@ Where:
 
 Optional: `--region`, `--embed_model_id`, and `--download_path`.
 
-> This script reads the PDFs **from S3**, not from your own folder. It downloads them
-> first into a scratch directory (`./downloaded_pdfs` by default, created automatically),
-> so you do not need to point it at your original PDFs again. Use `--download_path` only
-> if you want them somewhere else.
 
 The vectorise-store.py script will:
 
