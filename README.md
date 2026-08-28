@@ -399,27 +399,17 @@ rows.
 
 1. Open the ECS console and choose **Express mode** in the navigation pane.
 2. For **Image URI**, choose **Browse ECR images** and select your `v1` image.
-3. Leave **Task execution role** and **Infrastructure role** as they are. On a fresh
-   account the console says *"A default role `ecsTaskExecutionRole` will be created
-   automatically"* and does it for you when you click **Create**. Once the roles exist you
-   can select them here on later deployments.
+3. Leave **Task execution role** and **Infrastructure role** as they are. 
 
-   - the **task execution role** lets ECS pull your image from ECR and write the logs
-     (policy `AmazonECSTaskExecutionRolePolicy`)
-   - the **infrastructure role** lets Express Mode create the load balancer, certificate
-     and scaling policy for you
-     (policy `AmazonECSInfrastructureRoleforExpressGatewayServices`)
-
-   These two let *ECS* act on your behalf. The **Task role** in the next step is different:
-   that one is what *your container* uses to call Bedrock and OpenSearch, and it is not
-   created for you.
 4. Open **Additional configurations** and set:
    - **Container port**: `8501` (the default is 80; Streamlit does not listen there)
    - **Health check path**: `/_stcore/health` (Streamlit's health endpoint)
    - **Environment variables**: `AWS_REGION`, `OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`,
      `BEDROCK_CHAT_MODEL_ID`
-   - **Task role**: an IAM role granting `bedrock:InvokeModel` and `aoss:APIAccessAll`.
-     The container gets its AWS credentials from this role, so no access keys are needed.
+   - **Task role**: choose **`chatbot-lab-task-role`** from the list. Your instructor has
+     created it for you -- student accounts cannot create IAM roles, so ignore the
+     **Create new role** button. This role is what gives the container permission to call
+     Bedrock and OpenSearch, which is why no access keys are needed.
 5. Choose **Create**, then open the **Application URL** when the deployment finishes.
 
 You gave AWS an image and four settings. Note that the URL is **HTTPS** -- you did not
