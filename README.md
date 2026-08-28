@@ -53,6 +53,10 @@ Where placeholders:
 - **[YourBucketName]**: The name for the new S3 bucket to be created.
 - **[PathToYourPDFFiles]**: The local directory path where the PDF files are stored.
 
+> S3 bucket names are **globally unique across all AWS accounts**, so short names like
+> `test-yourname` are usually already taken by a stranger. Add your account ID to be safe,
+> for example `chatbot-lab-[YourName]-[YourAccount_ID]`.
+
 Optional: `--region` (default `us-east-1`).
 
 ### Step 2: Vector Store Creation

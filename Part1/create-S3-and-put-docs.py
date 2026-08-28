@@ -20,8 +20,15 @@ def create_bucket(s3_client, bucket_name, region):
         print(response)
     except botocore.exceptions.ClientError as error:
         code = error.response['Error']['Code']
-        if code in ('BucketAlreadyOwnedByYou', 'BucketAlreadyExists'):
-            print(f"Bucket '{bucket_name}' already exists, reusing it.")
+        if code == 'BucketAlreadyOwnedByYou':
+            print(f"Bucket '{bucket_name}' already exists in your account, reusing it.")
+        elif code in ('BucketAlreadyExists', 'IllegalLocationConstraintException'):
+            ## S3 bucket names are unique across all AWS accounts worldwide
+            raise SystemExit(
+                f"\nThe bucket name '{bucket_name}' is already taken by someone else.\n"
+                f"S3 bucket names are globally unique, so pick a different one, for example\n"
+                f"by adding your account ID: --bucket_name {bucket_name}-<your_account_id>"
+            )
         else:
             raise
     print()
