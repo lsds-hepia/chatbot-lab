@@ -310,17 +310,19 @@ same; only the way it is packaged and deployed changes.
 
 ### Step 1: Build and run the image locally
 
+Run:
+
 ```
 cd Part3
 docker build --platform linux/amd64 -t chatbot-lab .
 ```
 
-> `--platform linux/amd64` is required. AWS Fargate runs `X86_64` by default, so an image
-> built on an Apple Silicon Mac (arm64) will start and immediately die with
-> `exec format error`. This is one of the most common container deployment mistakes.
 
-Run it locally. Rather than a long line of `-e` flags, put the settings in a file.
-Create `Part3/.env`:
+Copy `env.example` to `.env` and fill in your two values from Part 1:
+
+```
+cp env.example .env
+```
 
 ```
 AWS_REGION=us-east-1
@@ -339,47 +341,68 @@ docker run -p 8501:8501 \
   chatbot-lab
 ```
 
-> **Why not pass the keys with `-e`?** Anything on the command line is written to your
-> shell history, is visible to other users through `ps`, and is kept in the container's
-> metadata, where `docker inspect` prints it back. Mounting `~/.aws` keeps the secret in
-> the one place it already lives, and `:ro` means the container cannot change it.
->
-> `.env` is in `.gitignore`: configuration belongs outside the image **and** outside the
-> repository.
-
 Open `http://localhost:8501`. The same application you deployed on a VM in Part 2 now runs
 in a container on your own machine, with no virtualenv and no installation steps.
 
-### Step 3: Watch the layer cache
 
-Add a blank line to `Part3/chatbot.py`, then build again:
+### Step 2: Push the image to Amazon ECR
 
-```
-docker build --platform linux/amd64 -t chatbot-lab .
-```
+An image on your laptop is not deployable. It has to live in a registry that AWS can pull
+from. Amazon ECR is that registry. This takes four commands.
 
-Look at the output: the `pip install` step says `CACHED` and the build finishes in
-seconds. Now move the `COPY chatbot.py .` line **above** the `COPY requirements.txt .`
-line and rebuild. What happens, and why? Put the Dockerfile back when you are done.
-
-### Step 4: Push the image to Amazon ECR
-
-An image on your laptop is not deployable. Push it to a registry.
+**1. Create the repository.** One repository holds all the versions of one application.
 
 ```
 aws ecr create-repository --repository-name chatbot-lab-[YourName] --region us-east-1
+```
 
+Unlike S3 bucket names, this one only has to be unique inside your own account and region.
+The output includes a `repositoryUri` -- copy it, the next commands need it. It looks like:
+
+```
+[YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]
+ |                |   |   |                       |
+ your account     |   |   region                  repository name
+                  ECR service
+```
+
+**2. Log Docker in to the registry.** ECR is private, so Docker has to authenticate.
+
+```
 aws ecr get-login-password --region us-east-1 \
   | docker login --username AWS --password-stdin [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com
+```
 
+`get-login-password` exchanges your AWS credentials for a temporary token, valid for 12
+hours, and the pipe hands it straight to Docker. `--password-stdin` reads it from the pipe
+instead of the command line, for the same reason you did not pass your keys with `-e`
+earlier: a password typed as an argument ends up in your shell history and in `ps`.
+
+**3. Tag the image with its destination.** A Docker image does not know where it belongs --
+the registry address is part of its *name*.
+
+```
 docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v1
+```
+
+This copies nothing. It gives the image you already built a second name saying "this
+belongs in that repository, as version `v1`". `docker images` will now show both names
+against the same image ID.
+
+**4. Upload it.**
+
+```
 docker push [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v1
 ```
+
+Push sends the layers one by one, and skips any the registry already has. That is why the
+first push is slow and later ones are fast: only the layer holding your changed
+`chatbot.py` has to travel.
 
 Note the tag `v1`. You are going to push a `v2` later. **Tags are how you version and roll
 back a deployment** -- there is no equivalent to this in the Part 2 workflow.
 
-### Step 5: Deploy with ECS Express Mode
+### Step 3: Deploy with ECS Express Mode
 
 1. Open the ECS console and choose **Express mode** in the navigation pane.
 2. For **Image URI**, choose **Browse ECR images** and select your `v1` image.
@@ -399,7 +422,7 @@ request a certificate or configure a load balancer.
 > which reads the value from AWS Secrets Manager at start-up. Why is that better? Who can
 > read a task definition?
 
-### Step 6: Find out what AWS actually built
+### Step 4: Find out what AWS actually built
 
 Express Mode made deployment easy by hiding the infrastructure. Go and find it. Everything
 it created lives in your own account. Locate each of the following in the console and write
@@ -420,7 +443,7 @@ down its name:
 and what does it pass through before reaching the container? Compare that drawing with
 Part 2, where a request went straight to a public IP on port 8501.
 
-### Step 7: Operate it without SSH
+### Step 5: Operate it without SSH
 
 There is no SSH into a Fargate task. Open **CloudWatch > Log groups** and find your
 service's log group. This is where `print()` output and Streamlit's own logs now go.
@@ -434,7 +457,7 @@ Now break it on purpose:
 
 Then set it back.
 
-### Step 8: Scaling, and a problem to discover
+### Step 6: Scaling, and a problem to discover
 
 In the ECS console, set the **minimum number of tasks** to 2 and update the service.
 
@@ -451,7 +474,7 @@ Where should the chat history live instead?
 
 Set the minimum back to 1 when you are done.
 
-### Step 9: Ship a new version
+### Step 7: Ship a new version
 
 Change the title in `Part3/chatbot.py`, then build, tag as `v2` and push:
 
@@ -465,7 +488,7 @@ Update the service to point at `v2` and watch the deployment. The old container 
 by a new one; nothing is patched in place. Then point it back at `v1` -- you have just
 rolled back a release.
 
-### Step 10: Compare the two deployments
+### Step 8: Compare the two deployments
 
 Fill this in from your own experience of Parts 2 and 3:
 
