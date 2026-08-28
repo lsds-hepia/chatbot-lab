@@ -2,6 +2,7 @@
 
 import boto3
 import os
+import time
 import argparse
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -34,7 +35,7 @@ def create_aws_clients(region, endpoint):
         use_ssl=True,
         verify_certs=True,
         connection_class=RequestsHttpConnection,
-        timeout=300,
+        timeout=600,
         max_retries=10,
         retry_on_timeout=True,
     )
@@ -113,6 +114,19 @@ def generate_embeddings(embeddings_model, chunks):
     return embeddings
 
 
+## A new collection needs a moment before it answers its first request
+def wait_until_ready(client, index_name, attempts=20, delay=15):
+    for attempt in range(attempts):
+        try:
+            client.count(index=index_name)
+            print("Collection is ready.")
+            return
+        except Exception:
+            print(f"  waiting for the collection to be ready ({attempt + 1}/{attempts})...")
+            time.sleep(delay)
+    print("Collection still not responding; trying to store anyway.")
+
+
 ## Store generated embeddings into an OpenSearch index
 def store_embeddings(embeddings, texts, meta_data, embeddings_model, host, awsauth, index_name):
     docsearch = OpenSearchVectorSearch.from_embeddings(
@@ -127,7 +141,7 @@ def store_embeddings(embeddings, texts, meta_data, embeddings_model, host, awsau
         connection_class=RequestsHttpConnection,
         index_name=index_name,
         bulk_size=1000,
-        timeout=300,
+        timeout=600,
         max_retries=10,
         retry_on_timeout=True,
     )
@@ -166,8 +180,18 @@ def main(bucket_name, endpoint, index_name, download_path, region, embed_model_i
     ## Prepare metadata for each chunk
     meta_data = [{'source': chunk.metadata['source'], 'page': chunk.metadata.get('page', 0) + 1} for chunk in chunks]
 
+    wait_until_ready(OpenSearch_client, index_name)
+
     print('Start storing')
-    store_embeddings(embeddings, texts, meta_data, embeddings_model, endpoint, awsauth, index_name)
+    for attempt in range(3):
+        try:
+            store_embeddings(embeddings, texts, meta_data, embeddings_model, endpoint, awsauth, index_name)
+            break
+        except Exception as e:
+            if attempt == 2:
+                raise
+            print(f"  storing failed ({type(e).__name__}), retrying in 30s...")
+            time.sleep(30)
     print('End storing')
 
 
