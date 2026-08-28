@@ -159,31 +159,24 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 
     [bedrock]
     embed_model_id = amazon.titan-embed-text-v2:0
-    chat_model_id = amazon.nova-micro-v1:0
+    chat_model_id = us.anthropic.claude-haiku-4-5-20251001-v1:0
     ```
 
    `config.ini` is gitignored. Never commit it.
 
    `endpoint` and `index_name` are the values from Part 1.
 
-   For `chat_model_id` the lab uses **Amazon Nova Micro**, the cheapest text model on
-   Bedrock:
+   For `chat_model_id` the lab uses **Claude Haiku 4.5**, the cheapest current-generation
+   Claude model. Note the `us.` prefix:
 
     ```
-    amazon.nova-micro-v1:0
+    us.anthropic.claude-haiku-4-5-20251001-v1:0
     ```
 
-   List the text models your account can use with:
-
-    ```
-    aws bedrock list-foundation-models --region us-east-1 \
-      --query "modelSummaries[?outputModalities[0]=='TEXT'].modelId" --output text
-    ```
-
-   > **If you switch to a Claude model**, note that recent ones cannot be called by their
-   > bare ID. They must be invoked through a *cross-region inference profile*, whose ID
-   > starts with `us.` -- for example `us.anthropic.claude-haiku-4-5-20251001-v1:0`.
-   > Using the bare `anthropic.…` form fails with:
+   > **The prefix is not optional.** Recent Claude models cannot be called on demand by
+   > their bare ID -- they must be invoked through a *cross-region inference profile*,
+   > whose ID starts with `us.` (or `global.`). Using the bare
+   > `anthropic.claude-haiku-4-5-20251001-v1:0` fails with:
    >
    > ```
    > ValidationException: Invocation of model ID anthropic.claude-haiku-4-5-20251001-v1:0
@@ -191,7 +184,15 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
    > inference profile that contains this model.
    > ```
    >
-   > Amazon and embedding models are not affected -- they use their bare IDs.
+   > List the profiles available to you with:
+   >
+   > ```
+   > aws bedrock list-inference-profiles --region us-east-1 \
+   >   --query "inferenceProfileSummaries[].inferenceProfileId" --output text
+   > ```
+   >
+   > Embedding models like `amazon.titan-embed-text-v2:0` are **not** affected -- they are
+   > called by their bare ID.
 
    > If nobody in your account has invoked an Anthropic model before, the first call may
    > require you to submit use case details. Do this once now: open the model in the
@@ -331,7 +332,7 @@ docker run -p 8501:8501 \
   -e AWS_SECRET_ACCESS_KEY=[YourSecret] \
   -e OPENSEARCH_ENDPOINT=[YourVectorDBEndpoint] \
   -e OPENSEARCH_INDEX=[Index_name] \
-  -e BEDROCK_CHAT_MODEL_ID=amazon.nova-micro-v1:0 \
+  -e BEDROCK_CHAT_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0 \
   chatbot-lab
 ```
 
