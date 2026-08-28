@@ -3,20 +3,6 @@
 Build a RAG chatbot on AWS: store lecture PDFs in **S3**, embed them with **Bedrock**,
 index the vectors in **OpenSearch Serverless**, and serve a **Streamlit** chat UI from **EC2**.
 
-> ### Before you start: two IDs you must look up yourself
-> Model IDs change between regions and over time. Open **Bedrock > Model access** in your
-> region and note the exact IDs for:
-> - an **embedding** model (e.g. `amazon.titan-embed-text-v2:0`)
-> - a current **Claude** chat model
->
-> Request access to both if it is not already granted. The scripts take these as
-> parameters -- do not assume the defaults are available in your region.
-
-> ### Cost warning
-> An **OpenSearch Serverless collection bills continuously** for a minimum number of
-> OCU-hours, whether or not you are querying it. When you finish the lab, run
-> `Part1/delete-vector-db.py` **and** `Part1/delete-s3.py`, and terminate your EC2 instance.
-
 ## Set up environment:
 1. Use your credentials to create an Ubuntu 24.04 specific VM on the AWS Amazon portal
 2. AWS CLI: Ensure AWS CLI is installed and configured on the VM you just created (refer to the setup guide provided in Session 1).
@@ -79,8 +65,13 @@ The script performs the following actions:
 After setting up the S3 bucket and Vector DB, we process the PDF files to generate and
 store embeddings in the vector database.
 
-Make sure your embedding model is enabled in **Bedrock > Model access** (see the note at
-the top of this README), then run:
+This is the first step that calls Bedrock, so you need an **embedding model** enabled.
+Open **Bedrock > Model access** in your region and check that an embedding model such as
+`amazon.titan-embed-text-v2:0` is granted; request access if it is not. Model IDs differ
+between regions, so use the exact ID shown in the console rather than assuming the default
+below is available to you.
+
+Then run:
 
 `python3 vectorise-store.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name] --local_path [local_path]`
 
@@ -141,6 +132,10 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
     ```
 
    `config.ini` is gitignored. Never commit it.
+
+   For `chat_model_id` you need a **Claude** model enabled in **Bedrock > Model access**.
+   Copy the exact model ID from the console -- it is region-specific. `endpoint` and
+   `index_name` are the values from Part 1.
 
 ### Step 2: Launching the Instance
 
@@ -430,5 +425,10 @@ Then, in the console:
 - Delete the **ECR repository** holding your images
 - Terminate the **EC2 instance** from Part 2 if it is still running
 
-The OpenSearch Serverless collection and the load balancer are the two items that keep
-billing whether or not you use them.
+> ### Cost warning
+> An **OpenSearch Serverless collection bills continuously** for a minimum number of
+> OCU-hours, whether or not you are querying it, and an Application Load Balancer bills by
+> the hour even with no traffic. These two are the expensive items in this lab -- deleting
+> the S3 bucket and terminating the EC2 instance is not enough on its own.
+
+Check the console afterwards and confirm that no collection and no load balancer remain.
