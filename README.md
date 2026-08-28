@@ -349,27 +349,20 @@ next three commands all need it. It is built from your account and region:
 
 Two parts of it are used separately:
 
-- the **registry address**, `[YourAccount_ID].dkr.ecr.[REGION].amazonaws.com` -- what you log in to
-- the **full repository URI**, the same thing plus `/[Repo]` -- what you tag and push
+- the **registry address** -- what you log in to. The commands below call this
+  **`[RegistryAddress]`**, and it means:
 
-`[YourAccount_ID]` is your 12-digit AWS account number. If you do not know it:
+  ```
+  [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com
+  ```
 
-```
-aws sts get-caller-identity --query Account --output text
-```
-
-You can also print the whole URI back at any time:
-
-```
-aws ecr describe-repositories --repository-names [Repo] --region [REGION] \
-  --query 'repositories[0].repositoryUri' --output text
-```
+- the **full repository URI** -- what you tag and push, which is `[RegistryAddress]/[Repo]`
 
 **2. Log Docker in to the registry.** ECR is private, so Docker has to authenticate.
 
 ```
 aws ecr get-login-password --region [REGION] \
-  | docker login --username AWS --password-stdin [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com
+  | docker login --username AWS --password-stdin [RegistryAddress]
 ```
 
 `get-login-password` exchanges your AWS credentials for a temporary token, valid 12 hours,
@@ -399,7 +392,7 @@ token expires.
 > ```json
 > {
 >   "credHelpers": {
->     "[YourAccount_ID].dkr.ecr.[REGION].amazonaws.com": "ecr-login"
+>     "[RegistryAddress]": "ecr-login"
 >   }
 > }
 > ```
@@ -410,7 +403,7 @@ token expires.
 the registry address is part of its *name*.
 
 ```
-docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]:v1
+docker tag chatbot-lab:latest [RegistryAddress]/[Repo]:v1
 ```
 
 This copies nothing. It gives the image you already built a second name meaning "this
@@ -420,7 +413,7 @@ names against the same image ID.
 **4. Upload it.**
 
 ```
-docker push [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]:v1
+docker push [RegistryAddress]/[Repo]:v1
 ```
 
 Push sends the layers one at a time and skips any the registry already has, which is why
@@ -511,8 +504,8 @@ Change the title in `Part3/chatbot.py`, then build, tag as `v2` and push:
 
 ```
 docker build --platform linux/amd64 -t chatbot-lab .
-docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]:v2
-docker push [YourAccount_ID].dkr.ecr.[REGION].amazonaws.com/[Repo]:v2
+docker tag chatbot-lab:latest [RegistryAddress]/[Repo]:v2
+docker push [RegistryAddress]/[Repo]:v2
 ```
 
 Watch the push output: most layers say `Layer already exists` and only the last one
