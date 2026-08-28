@@ -286,7 +286,6 @@ configure and connect to. In Part 3 you deploy exactly the same application as a
 
 ### What you will learn
 
-- How a `Dockerfile` describes an application and all of its dependencies
 - How an image registry (Amazon ECR) stores versioned, immutable artifacts
 - How configuration is injected at run time instead of being baked into the image
 - What a managed container service creates on your behalf, and what it costs
@@ -303,31 +302,13 @@ docker --version
 You also need the S3 bucket, the vector DB and the index from Part 1. The chatbot is the
 same; only the way it is packaged and deployed changes.
 
-> **Instructor note:** an ECS Express Mode service needs a **task execution role** and an
-> **infrastructure role** (AWS managed policies `AmazonECSTaskExecutionRolePolicy` and
-> `AmazonECSInfrastructureRoleforExpressGatewayServices`). The console offers to create
-> them, which requires IAM permissions. If student accounts cannot create IAM roles, create
-> both roles once beforehand and give students the names, along with `iam:PassRole` on them.
 
-### Step 1: Read the Dockerfile
 
-Open `Part3/Dockerfile` before building anything. Note two things:
 
-1. `requirements.txt` is copied and installed **before** `chatbot.py` is copied. Docker
-   caches each instruction as a layer, so editing the application code does not re-run the
-   slow `pip install`. You will verify this in Step 3.
-2. Nothing in the image contains your endpoint, your index name or your AWS keys. Compare
-   `Part3/chatbot.py` with `Part2/chatbot.py`:
 
-   ```
-   diff Part2/chatbot.py Part3/chatbot.py
-   ```
 
-   Part 2 reads `config.ini`. Part 3 reads environment variables. **Why can a container
-   image not contain config.ini?** Because the image is a shared, immutable artifact -- it
-   gets pushed to a registry, and anyone who can pull it can read every layer inside it.
 
-### Step 2: Build and run the image locally
+### Step 1: Build and run the image locally
 
 ```
 cd Part3
@@ -338,18 +319,33 @@ docker build --platform linux/amd64 -t chatbot-lab .
 > built on an Apple Silicon Mac (arm64) will start and immediately die with
 > `exec format error`. This is one of the most common container deployment mistakes.
 
-Run it locally, passing the configuration as environment variables:
+Run it locally. Rather than a long line of `-e` flags, put the settings in a file.
+Create `Part3/.env`:
+
+```
+AWS_REGION=us-east-1
+OPENSEARCH_ENDPOINT=[YourVectorDBEndpoint]
+OPENSEARCH_INDEX=[Index_name]
+BEDROCK_CHAT_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0
+```
+
+Notice there are no AWS keys in it. Instead of copying credentials into the container,
+mount the ones you already have, read-only:
 
 ```
 docker run -p 8501:8501 \
-  -e AWS_REGION=us-east-1 \
-  -e AWS_ACCESS_KEY_ID=[YourKeyId] \
-  -e AWS_SECRET_ACCESS_KEY=[YourSecret] \
-  -e OPENSEARCH_ENDPOINT=[YourVectorDBEndpoint] \
-  -e OPENSEARCH_INDEX=[Index_name] \
-  -e BEDROCK_CHAT_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0 \
+  --env-file .env \
+  -v ~/.aws:/root/.aws:ro \
   chatbot-lab
 ```
+
+> **Why not pass the keys with `-e`?** Anything on the command line is written to your
+> shell history, is visible to other users through `ps`, and is kept in the container's
+> metadata, where `docker inspect` prints it back. Mounting `~/.aws` keeps the secret in
+> the one place it already lives, and `:ro` means the container cannot change it.
+>
+> `.env` is in `.gitignore`: configuration belongs outside the image **and** outside the
+> repository.
 
 Open `http://localhost:8501`. The same application you deployed on a VM in Part 2 now runs
 in a container on your own machine, with no virtualenv and no installation steps.
