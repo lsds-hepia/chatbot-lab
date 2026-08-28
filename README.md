@@ -403,11 +403,13 @@ rows.
 4. Open **Additional configurations** and set:
    - **Container port**: `8501` (the default is 80; Streamlit does not listen there)
    - **Health check path**: `/_stcore/health` (Streamlit's health endpoint)
-   - **Environment variables**: `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
-     `OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`, `BEDROCK_CHAT_MODEL_ID`
+   - **Environment variables**: `AWS_REGION`, `OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`,
+     `BEDROCK_CHAT_MODEL_ID`
+   - **Task role**: an IAM role granting `bedrock:InvokeModel` and `aoss:APIAccessAll`.
+     The container gets its AWS credentials from this role, so no access keys are needed.
 5. Choose **Create**, then open the **Application URL** when the deployment finishes.
 
-You gave AWS an image and six settings. Note that the URL is **HTTPS** -- you did not
+You gave AWS an image and four settings. Note that the URL is **HTTPS** -- you did not
 request a certificate or configure a load balancer.
 
 
