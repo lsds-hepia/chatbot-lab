@@ -20,6 +20,21 @@ index the vectors in **OpenSearch Serverless**, and serve a **Streamlit** chat U
    Re-run `source ~/chatbotlab/bin/activate` in every new SSH session. Once it is active,
    `pip3` and `python3` refer to the venv.
 
+   You do **not** need to run `aws configure` again inside the venv. Credentials live in
+   `~/.aws/credentials`, outside the environment, so boto3 finds them from anywhere. Check
+   with:
+
+    ```
+    aws sts get-caller-identity
+    ```
+
+   This prints your account ID and IAM user ARN -- both are needed in Part 1 Step 2. If it
+   fails, your AWS CLI is not configured yet.
+
+   **Use the same region everywhere.** Every script takes `--region` and defaults to
+   `us-east-1`. If you work in another region, pass `--region` to *all* of them, so the
+   bucket, the collection and the Bedrock calls end up in the same place.
+
 ## Part 1:
 
 Go to the Part1 folder: `cd Part1`
@@ -50,7 +65,10 @@ Where:
 - **[YourIAM_user]** : the IAM user of your account.
 - **[YourAccount_ID]** : the ACCOUNT ID of your account.
 
-You will find YourIAM_user and YourAccount_ID when you click on your account ID in the top right-hand corner of the AWS Amazon portal.
+Optional: `--region` (default `us-east-1`).
+
+You will find YourIAM_user and YourAccount_ID when you click on your account ID in the top
+right-hand corner of the AWS Amazon portal, or by running `aws sts get-caller-identity`.
 
 The script performs the following actions:
 

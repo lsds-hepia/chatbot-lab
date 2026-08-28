@@ -9,10 +9,9 @@ import botocore
 import time
 import argparse
 
-client = boto3.client('opensearchserverless')
 
 
-def delete_collection(collection_name):
+def delete_collection(client, collection_name):
     """Deletes the collection and waits for it to disappear."""
     try:
         response = client.batch_get_collection(names=[collection_name])
@@ -38,7 +37,7 @@ def delete_collection(collection_name):
     print("WARNING: collection still present after 5 minutes; check the console.")
 
 
-def delete_policy(kind, name):
+def delete_policy(client, kind, name):
     """Deletes one security or access policy."""
     try:
         if kind == 'data':
@@ -53,7 +52,8 @@ def delete_policy(kind, name):
             print(f"Could not delete {kind} policy '{name}': {error}")
 
 
-def main(collection_name):
+def main(collection_name, region):
+    client = boto3.client('opensearchserverless', region_name=region)
     confirm = input(
         f"Permanently delete collection '{collection_name}' and its policies? "
         f"All stored embeddings will be lost. [y/N] "
@@ -62,15 +62,16 @@ def main(collection_name):
         print("Aborted.")
         return
 
-    delete_collection(collection_name)
-    delete_policy('encryption', f'{collection_name}-encryption-policy')
-    delete_policy('network', f'{collection_name}-network-policy')
-    delete_policy('data', f'{collection_name}-access-policy')
+    delete_collection(client, collection_name)
+    delete_policy(client, 'encryption', f'{collection_name}-encryption-policy')
+    delete_policy(client, 'network', f'{collection_name}-network-policy')
+    delete_policy(client, 'data', f'{collection_name}-access-policy')
     print("\nTeardown complete. Verify in the console that no collection remains billing.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Delete the vector DB collection and its policies")
     parser.add_argument("--collection_name", required=True, help="The name of the collection to delete")
+    parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     args = parser.parse_args()
-    main(args.collection_name)
+    main(args.collection_name, args.region)

@@ -8,7 +8,6 @@ import time
 import argparse
 
 
-client = boto3.client('opensearchserverless')
 #service = 'aoss'
 
 def createEncryptionPolicy(client,policy_name, collection_name):
@@ -143,7 +142,8 @@ def waitForCollectionCreation(client, collection_name):
     raise SystemExit("Collection did not become ACTIVE in 10 minutes; check the console.")
 
 
-def main(collection_name,IAM_USER,ACCOUNT_ID):
+def main(collection_name,IAM_USER,ACCOUNT_ID,region):
+    client = boto3.client('opensearchserverless', region_name=region)
     encryption_policy_name = f'{collection_name}-encryption-policy'
     network_policy_name = f'{collection_name}-network-policy'
     access_policy_name = f'{collection_name}-access-policy'
@@ -161,5 +161,6 @@ if __name__== "__main__":
     parser.add_argument("--collection_name", required=True, help="The name of the collection")
     parser.add_argument("--iam_user", required=True, help="The iam user")
     parser.add_argument("--account_id", required=True, help="The account id")
+    parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     args = parser.parse_args()
-    main(args.collection_name,args.iam_user,args.account_id)
+    main(args.collection_name,args.iam_user,args.account_id,args.region)
