@@ -127,18 +127,18 @@ def store_embeddings(embeddings, texts, meta_data, embeddings_model, host, awsau
 
 
 ## main
-def main(bucket_name, endpoint, index_name, local_path, region, embed_model_id):
+def main(bucket_name, endpoint, index_name, download_path, region, embed_model_id):
 
     s3_client, bedrock_client, awsauth, OpenSearch_client = create_aws_clients(region, endpoint)
 
     embeddings_model = BedrockEmbeddings(model_id=embed_model_id, client=bedrock_client)
 
-    download_documents(s3_client, bucket_name, local_path)
+    download_documents(s3_client, bucket_name, download_path)
 
-    loader = PyPDFDirectoryLoader(local_path)
+    loader = PyPDFDirectoryLoader(download_path)
     docs = loader.load()
     if not docs:
-        raise SystemExit(f"No readable PDF pages found in {local_path}.")
+        raise SystemExit(f"No readable PDF pages found in {download_path}.")
 
     print('Start chunking')
     chunks = split_text(docs, 1000, 100)
@@ -168,9 +168,11 @@ if __name__ == "__main__":
     parser.add_argument("--bucket_name", required=True, help="The S3 bucket name where documents are stored")
     parser.add_argument("--endpoint", required=True, help="The OpenSearch service endpoint (without https://)")
     parser.add_argument("--index_name", required=True, help="The name of the OpenSearch index")
-    parser.add_argument("--local_path", required=True, help="Local folder to download the PDFs into")
+    parser.add_argument("--download_path", default="./downloaded_pdfs",
+                        help="Temporary local folder the PDFs are downloaded into "
+                             "(default: ./downloaded_pdfs, created if missing)")
     parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     parser.add_argument("--embed_model_id", default="amazon.titan-embed-text-v2:0",
                         help="Bedrock embedding model ID (default: amazon.titan-embed-text-v2:0)")
     args = parser.parse_args()
-    main(args.bucket_name, args.endpoint, args.index_name, args.local_path, args.region, args.embed_model_id)
+    main(args.bucket_name, args.endpoint, args.index_name, args.download_path, args.region, args.embed_model_id)

@@ -51,9 +51,8 @@ Create an S3 bucket and upload a few PDF files by running:
 
 Where placeholders:
 - **[YourBucketName]**: The name for the new S3 bucket to be created.
-- **[PathToYourPDFFiles]**: The local directory path where the PDF files are stored.
-
-
+- **[PathToYourPDFFiles]**: the folder on your machine that **already contains** the PDF
+  files you want to upload. Only files ending in `.pdf` are uploaded.
 
 Optional: `--region` (default `us-east-1`).
 
@@ -104,17 +103,20 @@ is the default used here. It produces 1024-dimensional vectors.
 
 Then run:
 
-`python3 vectorise-store.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name] --local_path [local_path]`
+`python3 vectorise-store.py --bucket_name [YourBucketName] --endpoint [YourVectorDBEndpoint] --index_name [Index_name]`
 
 Where:
 
 - **[YourBucketName]**: The name of the S3 bucket containing the PDF files.
 - **[YourVectorDBEndpoint]**: Endpoint of the vector database (without `https://`).
 - **[Index_name]**: The index_name where to store the embeddings in the collection.
-- **[local_path]**: local folder the PDFs are downloaded into.
 
-Optional: `--region`, and `--embed_model_id` if you are not using the default
-`amazon.titan-embed-text-v2:0`.
+Optional: `--region`, `--embed_model_id`, and `--download_path`.
+
+> This script reads the PDFs **from S3**, not from your own folder. It downloads them
+> first into a scratch directory (`./downloaded_pdfs` by default, created automatically),
+> so you do not need to point it at your original PDFs again. Use `--download_path` only
+> if you want them somewhere else.
 
 The vectorise-store.py script will:
 
@@ -123,9 +125,6 @@ The vectorise-store.py script will:
 * Generate embeddings from the chunks.
 * Create an index in the vector DB, sized to match your embedding model.
 * Store these embeddings in the OpenSearch Vector DB.
-
-> The index is sized from the embedding model (Titan v1 gives 1536 dimensions, v2 gives
-> 1024). If you change the model, use a new `--index_name`.
 
 
 ## Part 2:
