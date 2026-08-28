@@ -348,59 +348,78 @@ in a container on your own machine, with no virtualenv and no installation steps
 ### Step 2: Push the image to Amazon ECR
 
 An image on your laptop is not deployable. It has to live in a registry that AWS can pull
-from. Amazon ECR is that registry. This takes four commands.
+from. Amazon ECR is that registry.
+
+First set four variables. Everything after this reuses them, so you never type your account
+ID by hand:
+
+```
+export REGION=us-east-1
+export REPO=chatbot-lab-[YourName]
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export ECR=$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+echo $ECR/$REPO
+```
+
+The last line should print something like
+`123456789012.dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-abir`. That address is how AWS
+names images:
+
+```
+[account].dkr.ecr.[region].amazonaws.com/[repository]:[tag]
+```
+
+These variables live in your current terminal only. If you open a new one, run the four
+`export` lines again.
 
 **1. Create the repository.** One repository holds all the versions of one application.
+Unlike an S3 bucket, the name only has to be unique inside your own account and region.
 
 ```
-aws ecr create-repository --repository-name chatbot-lab-[YourName] --region us-east-1
-```
-
-Unlike S3 bucket names, this one only has to be unique inside your own account and region.
-The output includes a `repositoryUri` -- copy it, the next commands need it. It looks like:
-
-```
-[YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]
- |                |   |   |                       |
- your account     |   |   region                  repository name
-                  ECR service
+aws ecr create-repository --repository-name $REPO --region $REGION
 ```
 
 **2. Log Docker in to the registry.** ECR is private, so Docker has to authenticate.
 
 ```
-aws ecr get-login-password --region us-east-1 \
-  | docker login --username AWS --password-stdin [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com
+aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR
 ```
 
-`get-login-password` exchanges your AWS credentials for a temporary token, valid for 12
-hours, and the pipe hands it straight to Docker. `--password-stdin` reads it from the pipe
-instead of the command line, for the same reason you did not pass your keys with `-e`
-earlier: a password typed as an argument ends up in your shell history and in `ps`.
+`get-login-password` exchanges your AWS credentials for a temporary token, valid 12 hours,
+and the pipe hands it straight to Docker. `--password-stdin` reads it from the pipe rather
+than the command line, for the same reason you did not pass your keys with `-e` earlier: a
+password given as an argument ends up in your shell history and in `ps`.
 
-**3. Tag the image with its destination.** A Docker image does not know where it belongs --
+You should see `Login Succeeded`. Do this again if you come back to the lab tomorrow -- the
+token expires.
+
+**3. Tag the image with its destination.** A Docker image does not know where it belongs:
 the registry address is part of its *name*.
 
 ```
-docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v1
+docker tag chatbot-lab:latest $ECR/$REPO:v1
 ```
 
-This copies nothing. It gives the image you already built a second name saying "this
-belongs in that repository, as version `v1`". `docker images` will now show both names
-against the same image ID.
+This copies nothing. It gives the image you already built a second name meaning "this
+belongs in that repository, as version `v1`". Run `docker images` and you will see both
+names against the same image ID.
 
 **4. Upload it.**
 
 ```
-docker push [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v1
+docker push $ECR/$REPO:v1
 ```
 
-Push sends the layers one by one, and skips any the registry already has. That is why the
-first push is slow and later ones are fast: only the layer holding your changed
+Push sends the layers one at a time and skips any the registry already has, which is why
+the first push is slow and later ones are quick: only the layer holding your changed
 `chatbot.py` has to travel.
 
 Note the tag `v1`. You are going to push a `v2` later. **Tags are how you version and roll
-back a deployment** -- there is no equivalent to this in the Part 2 workflow.
+back a deployment** -- there is no equivalent in the Part 2 workflow.
+
+> If you get lost, the ECR console shows these commands filled in with your own account ID:
+> open your repository and choose **View push commands**.
 
 ### Step 3: Deploy with ECS Express Mode
 
@@ -480,9 +499,14 @@ Change the title in `Part3/chatbot.py`, then build, tag as `v2` and push:
 
 ```
 docker build --platform linux/amd64 -t chatbot-lab .
-docker tag chatbot-lab:latest [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v2
-docker push [YourAccount_ID].dkr.ecr.us-east-1.amazonaws.com/chatbot-lab-[YourName]:v2
+docker tag chatbot-lab:latest $ECR/$REPO:v2
+docker push $ECR/$REPO:v2
 ```
+
+(If you opened a new terminal since Step 2, set the `export` variables again first.)
+
+Watch the push output: most layers say `Layer already exists` and only the last one
+uploads. That is the Dockerfile layer ordering paying off.
 
 Update the service to point at `v2` and watch the deployment. The old container is replaced
 by a new one; nothing is patched in place. Then point it back at `v1` -- you have just
