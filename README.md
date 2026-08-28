@@ -90,15 +90,17 @@ This is the first step that calls Bedrock, so you need the ID of an **embedding 
 Open **Bedrock > Model catalog** in your region and find one, for example
 `amazon.titan-embed-text-v2:0`.
 
-You do **not** need to request access. The old *Model access* page has been retired:
-serverless foundation models are enabled automatically the first time they are invoked in
-your account.
 
-Model availability differs between regions, so **copy the exact model ID from the console**
-rather than assuming the default below exists in yours. Some models are offered only as
-cross-region inference profiles, whose IDs carry a region prefix (for example
-`us.anthropic.…` instead of `anthropic.…`). Use the ID exactly as the console shows it,
-prefix included.
+Model availability differs between regions. You can list what your account can actually
+use from the command line:
+
+```
+aws bedrock list-foundation-models --region us-east-1 \
+  --query "modelSummaries[?outputModalities[0]=='EMBEDDING'].modelId" --output text
+```
+
+`amazon.titan-embed-text-v2:0` is the cheapest of the general-purpose embedding models and
+is the default used here. It produces 1024-dimensional vectors.
 
 Then run:
 
@@ -157,14 +159,40 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 
     [bedrock]
     embed_model_id = amazon.titan-embed-text-v2:0
-    chat_model_id = PUT_A_CURRENT_CLAUDE_MODEL_ID_HERE
+    chat_model_id = us.anthropic.claude-haiku-4-5-20251001-v1:0
     ```
 
    `config.ini` is gitignored. Never commit it.
 
-   For `chat_model_id`, find a **Claude** model in **Bedrock > Model catalog** and copy its
-   exact model ID -- it is region-specific. `endpoint` and `index_name` are the values
-   from Part 1.
+   `endpoint` and `index_name` are the values from Part 1.
+
+   For `chat_model_id` the lab uses **Claude Haiku 4.5**, the cheapest current-generation
+   Claude model. Note the `us.` prefix:
+
+    ```
+    us.anthropic.claude-haiku-4-5-20251001-v1:0
+    ```
+
+   > **The prefix is not optional.** Recent Claude models cannot be called on demand by
+   > their bare ID -- they must be invoked through a *cross-region inference profile*,
+   > whose ID starts with `us.` (or `global.`). Using the bare
+   > `anthropic.claude-haiku-4-5-20251001-v1:0` fails with:
+   >
+   > ```
+   > ValidationException: Invocation of model ID anthropic.claude-haiku-4-5-20251001-v1:0
+   > with on-demand throughput isn't supported. Retry your request with the ID or ARN of an
+   > inference profile that contains this model.
+   > ```
+   >
+   > List the profiles available to you with:
+   >
+   > ```
+   > aws bedrock list-inference-profiles --region us-east-1 \
+   >   --query "inferenceProfileSummaries[].inferenceProfileId" --output text
+   > ```
+   >
+   > Embedding models like `amazon.titan-embed-text-v2:0` are **not** affected -- they are
+   > called by their bare ID.
 
    > If nobody in your account has invoked an Anthropic model before, the first call may
    > require you to submit use case details. Do this once now: open the model in the
@@ -304,7 +332,7 @@ docker run -p 8501:8501 \
   -e AWS_SECRET_ACCESS_KEY=[YourSecret] \
   -e OPENSEARCH_ENDPOINT=[YourVectorDBEndpoint] \
   -e OPENSEARCH_INDEX=[Index_name] \
-  -e BEDROCK_CHAT_MODEL_ID=[YourChatModelId] \
+  -e BEDROCK_CHAT_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0 \
   chatbot-lab
 ```
 

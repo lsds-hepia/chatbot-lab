@@ -12,6 +12,6 @@ endpoint = YOUR_OPENSEARCH_ENDPOINT
 index_name = YOUR_INDEX_NAME
 
 [bedrock]
-# Get the exact IDs from Bedrock > Model access in YOUR region.
+# Check these exist in your region with: aws bedrock list-foundation-models
 embed_model_id = amazon.titan-embed-text-v2:0
-chat_model_id = PUT_A_CURRENT_CLAUDE_MODEL_ID_HERE
+chat_model_id = us.anthropic.claude-haiku-4-5-20251001-v1:0
