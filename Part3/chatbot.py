@@ -11,7 +11,7 @@ from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
 from langchain_core.prompts import PromptTemplate
 
 ## Configuration passed in by ECS at run time
-region = os.environ.get('AWS_REGION', 'us-east-1')
+region = os.environ.get('AWS_REGION', 'eu-central-1')
 endpoint = os.environ['OPENSEARCH_ENDPOINT']
 index_name = os.environ['OPENSEARCH_INDEX']
 embed_model_id = os.environ.get('BEDROCK_EMBED_MODEL_ID', 'amazon.titan-embed-text-v2:0')

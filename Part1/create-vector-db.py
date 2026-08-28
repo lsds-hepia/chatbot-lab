@@ -161,6 +161,6 @@ if __name__== "__main__":
     parser.add_argument("--collection_name", required=True, help="The name of the collection")
     parser.add_argument("--iam_user", required=True, help="The iam user")
     parser.add_argument("--account_id", required=True, help="The account id")
-    parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
+    parser.add_argument("--region", default="eu-central-1", help="AWS region (default: eu-central-1)")
     args = parser.parse_args()
     main(args.collection_name,args.iam_user,args.account_id,args.region)

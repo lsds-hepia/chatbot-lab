@@ -169,7 +169,7 @@ if __name__ == "__main__":
     parser.add_argument("--endpoint", required=True, help="The OpenSearch service endpoint (without https://)")
     parser.add_argument("--index_name", required=True, help="The name of the OpenSearch index")
     parser.add_argument("--local_path", required=True, help="Local folder to download the PDFs into")
-    parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
+    parser.add_argument("--region", default="eu-central-1", help="AWS region (default: eu-central-1)")
     parser.add_argument("--embed_model_id", default="amazon.titan-embed-text-v2:0",
                         help="Bedrock embedding model ID (default: amazon.titan-embed-text-v2:0)")
     args = parser.parse_args()
