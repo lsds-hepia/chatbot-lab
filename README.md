@@ -178,8 +178,6 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
     ```ini
     [aws]
     region = us-east-1
-    aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
-    aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY
 
     [opensearch]
     endpoint = YOUR_OPENSEARCH_ENDPOINT
@@ -251,13 +249,16 @@ startup configurations.
 
 Run the following command to create your instance:
 
-`python3 create_instance.py --ami_id [AMI_ID] --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID]`
+`python3 create_instance.py --ami_id [AMI_ID] --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID] --instance_profile [InstanceProfile]`
 
 Where:
 
 - **[AMI_ID]**: The AMI provided by your instructor.
 - **[KeyPairName]**: The name of the key_pair created earlier.
 - **[SecurityGroupID]**: The id of the security group created earlier.
+- **[InstanceProfile]**: the instance profile your instructor created, for example
+  `chatbot-lab-task-role`. The instance takes its AWS credentials from this role, which is
+  why `config.ini` holds no keys.
 
 Optional: `--instance_type` (default `t3.micro`).
 
@@ -305,38 +306,27 @@ docker --version
 You also need the S3 bucket, the vector DB and the index from Part 1. The chatbot is the
 same; only the way it is packaged and deployed changes.
 
-### Step 1: Build and run the image locally
-
-Run:
+### Step 1: Build the image
 
 ```
 cd Part3
 docker build --platform linux/amd64 --provenance=false -t chatbot-lab .
 ```
 
-Copy `env.example` to `.env` and fill it in:
+`--platform linux/amd64` is required. AWS Fargate runs `X86_64`, so an image built on an
+Apple Silicon Mac (arm64) starts and immediately dies with `exec format error`.
+
+The image contains the application and its dependencies, and nothing else: no endpoint, no
+index name, no credentials. Compare `Part3/chatbot.py` with `Part2/chatbot.py`:
 
 ```
-cp env.example .env
+diff ../Part2/chatbot.py chatbot.py
 ```
 
-Where:
-
-- **[YourVectorDBEndpoint]**: the vector database endpoint from Part 1, Step 2.
-- **[Index_name]**: the index name you used in Part 1, Step 3.
-
-Notice there are no AWS keys in it. Instead of copying credentials into the container,
-mount the ones you already have, read-only:
-
-```
-docker run -p 8501:8501 \
-  --env-file .env \
-  -v ~/.aws:/root/.aws:ro \
-  chatbot-lab
-```
-
-Open `http://localhost:8501`. The same application you deployed on a VM in Part 2 now runs
-in a container on your own machine, with no virtualenv and no installation steps.
+Part 2 reads `config.ini`; Part 3 reads environment variables, which you will set on the
+service in Step 3. **Why can the image not simply contain `config.ini`?** Because an image
+is a shared artifact: it is pushed to a registry, and anyone who can pull it can read every
+layer inside it. `env.example` lists the variables the container expects.
 
 ### Step 2: Push the image to Amazon ECR
 

@@ -1,11 +1,8 @@
 # Copy this file to config.ini and fill in your values.
-# config.ini is gitignored -- never commit real credentials.
+# No AWS keys here: the instance gets its credentials from its IAM role.
 
 [aws]
 region = us-east-1
-
-aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
-aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY
 
 [opensearch]
 endpoint = YOUR_OPENSEARCH_ENDPOINT

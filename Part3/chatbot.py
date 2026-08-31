@@ -17,7 +17,7 @@ index_name = os.environ['OPENSEARCH_INDEX']
 embed_model_id = os.environ.get('BEDROCK_EMBED_MODEL_ID', 'amazon.titan-embed-text-v2:0')
 chat_model_id = os.environ['BEDROCK_CHAT_MODEL_ID']
 
-## boto3 reads AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from the environment
+## Credentials come from the task role attached to the container
 bedrock_client = boto3.client(service_name="bedrock-runtime", region_name=region)
 
 # configuring streamlit page settings

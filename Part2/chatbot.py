@@ -19,14 +19,9 @@ index_name = config.get('opensearch', 'index_name')
 embed_model_id = config.get('bedrock', 'embed_model_id', fallback='amazon.titan-embed-text-v2:0')
 chat_model_id = config.get('bedrock', 'chat_model_id')
 
-aws_access_key_id = config.get('aws', 'aws_access_key_id')
-aws_secret_access_key = config.get('aws', 'aws_secret_access_key')
-
-session = boto3.Session(
-    aws_access_key_id=aws_access_key_id,
-    aws_secret_access_key=aws_secret_access_key,
-    region_name=region,
-)
+## Credentials come from the IAM role attached to the instance, so there are
+## no keys in this file or in config.ini.
+session = boto3.Session(region_name=region)
 
 # Embeddings Client
 bedrock_client = session.client(service_name="bedrock-runtime")

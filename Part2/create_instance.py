@@ -56,7 +56,7 @@ def build_user_data(config_content):
     return script.replace("{CONFIG}", config_content.strip())
 
 
-def create_instance(ami_id, key_pair_name, security_group_id, instance_type):
+def create_instance(ami_id, key_pair_name, security_group_id, instance_type, instance_profile):
 
     # Load the config content
     config_content = get_config_content('config.ini')
@@ -77,14 +77,16 @@ def create_instance(ami_id, key_pair_name, security_group_id, instance_type):
             'ResourceType': 'instance',
             'Tags': [{'Key': 'Name', 'Value': 'chatbot-lab'}]
         }],
+        ## The instance gets its AWS credentials from this role
+        IamInstanceProfile={'Name': instance_profile},
     )
     return instance
 
 
-def main(ami_id, key_pair_name, security_group_id, instance_type):
+def main(ami_id, key_pair_name, security_group_id, instance_type, instance_profile):
 
     print("Creating an EC2 instance")
-    instance = create_instance(ami_id, key_pair_name, security_group_id, instance_type)
+    instance = create_instance(ami_id, key_pair_name, security_group_id, instance_type, instance_profile)
     inst = instance[0]
     print("Instance created with ID:", inst.id)
 
@@ -103,5 +105,7 @@ if __name__ == '__main__':
     parser.add_argument("--key_pair_name", required=True, help="The name of the key pair to use for the instance")
     parser.add_argument("--security_group_id", required=True, help="The ID of the security group to use for the instance")
     parser.add_argument("--instance_type", default="t3.micro", help="EC2 instance type (default: t3.micro)")
+    parser.add_argument("--instance_profile", required=True,
+                        help="Instance profile for the role your instructor created")
     args = parser.parse_args()
-    main(args.ami_id, args.key_pair_name, args.security_group_id, args.instance_type)
+    main(args.ami_id, args.key_pair_name, args.security_group_id, args.instance_type, args.instance_profile)
