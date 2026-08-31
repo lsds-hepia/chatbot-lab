@@ -394,16 +394,13 @@ Part 2, where a request went straight to a public IP on port 8501.
 
 ### Step 5: Compare the two deployments
 
-Fill this in from what you did in Parts 2 and 3, and from what you found in Step 4:
+Fill this in from your own experience of Parts 2 and 3:
 
 | | Part 2 (EC2) | Part 3 (container) |
 |---|---|---|
 | What you had to create by hand | | |
 | Where the app's dependencies are defined | | |
 | How you deploy a change | | |
-| How you read the logs | | |
-| What happens if the app crashes | | |
-| How you run a second copy | | |
 | Is it reachable over HTTPS? | | |
 | What you pay for when nobody is using it | | |
 
