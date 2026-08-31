@@ -93,17 +93,31 @@ Create a vector database for storing embeddings by running:
 
 Where:
 - **[Name_of_collection]**: Name of the collection that you want to create.
-- **[TaskRoleArn]**: the role your instructor created, for example
+- **[TaskRoleArn]**: the identifier of the role your instructor created, for example
   `arn:aws:iam::[YourAccount_ID]:role/chatbot-lab-task-role`.
 
-The script reads your own identity from the AWS CLI, so you no longer pass your IAM user
-or account ID; it prints the identity it grants access to.
+The script reads your own identity from the AWS CLI, so you do not pass your IAM user or
+account ID; it prints the identity it grants access to.
 
-Only *you* can read the collection by default. The last argument also admits the **role**
-that the application runs as in Parts 2 and 3 -- roles are explained in Part 2, where you
-first use one. Note it now, because OpenSearch Serverless checks the principals in this
-policy separately from IAM: a role with the right IAM permissions is still refused unless
-it is named here.
+**What is a role, and why does the database need to know about it?**
+
+A new collection is private: only the identity that created it can read or write. Right now
+that is *you*, using the keys `aws configure` stored on your machine, and that is what
+Step 3 needs to load the embeddings.
+
+But in Parts 2 and 3 the chatbot does not run on your machine and cannot use your keys. It
+runs on a server, and a server is given an **IAM role** instead: a set of permissions with
+no password and no keys, that AWS lends to a machine for a few hours at a time. An **ARN**
+(*Amazon Resource Name*) is simply the full identifier of an AWS resource -- here, of that
+role.
+
+So the collection has to admit two identities: **you**, for the work you do now, and **the
+role**, for the application later. That is what the two arguments do.
+
+> Adding the role here does not give it access on its own. OpenSearch Serverless checks
+> this policy *separately* from IAM permissions, so a role that IAM allows is still refused
+> unless it is named here -- and the error is a bare `403 Forbidden` that says nothing
+> about which of the two checks failed.
 
 Optional: `--region` (default `us-east-1`).
 
@@ -199,11 +213,10 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
    long-lived, they would sit in a file on a machine you throw away at the end of the lab,
    and anyone who reached that machine would have them.
 
-   Instead the instance is given an **IAM role**. A role is a set of permissions with no
-   password and no keys, that a *service* is allowed to assume. When an instance carries
-   one, AWS publishes short-lived credentials for it to an address only that instance can
-   reach, and refreshes them automatically. Any AWS SDK looks there on its own, which is
-   why `chatbot.py` creates its client with no credentials at all:
+   Instead the instance is given the **IAM role** you named in Part 1. AWS publishes
+   short-lived credentials for it to an address only that instance can reach, and refreshes
+   them automatically. Any AWS SDK looks there on its own, which is why `chatbot.py`
+   creates its client with no credentials at all:
 
     ```python
     session = boto3.Session(region_name=region)
