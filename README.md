@@ -96,7 +96,6 @@ Where:
 - **[TaskRoleArn]**: the identifier of the role your instructor created, for example
   `arn:aws:iam::[YourAccount_ID]:role/chatbot-lab-task-role`.
 
-
 **What is a role, and why does the database need to know about it?**
 
 A new collection is private: only the identity that created it can read or write. Right now
@@ -110,8 +109,6 @@ no password and no keys, that AWS lends to a machine for a few hours at a time. 
 role.
 
 Optional: `--region` (default `us-east-1`).
-
-
 
 The script performs the following actions:
 
@@ -218,10 +215,7 @@ Where:
 
 - **[KeyPairName]**: The name of the key_pair created earlier.
 - **[SecurityGroupID]**: The id of the security group created earlier.
-- **[InstanceProfile]**: the instance profile your instructor created,
-  `chatbot-lab-task-role`. It is what attaches the IAM role to the instance: EC2 cannot
-  take a role directly, only an instance profile holding one. This is how the machine
-  gets its AWS credentials, and why `config.ini` contains no keys.
+- **[InstanceProfile]**: the instance profile your instructor created `chatbot-lab-task-role`.  It gives the instance permission to call Bedrock and OpenSearch.
 
 Optional: `--instance_type` (default `t3.micro`), `--region`, and `--ami_id`.
 
@@ -231,14 +225,6 @@ installs the requirements and starts Streamlit. Everything it does is written to
 `/var/log/chatbot-lab.log`.
 
 The script waits for the instance to start and prints its public IP.
-
-> **Why send the code instead of preparing an image?** An image would have to be rebuilt
-> every time the application changes, and a lab image that is a year old usually no longer
-> matches the code in the repository -- assuming it has not been deleted in the meantime.
-> Sending the application with the instance means what runs is always what you have in
-> front of you: edit `chatbot.py`, launch again, and your change is there. The whole
-> startup script has to fit in 16 KB, which is plenty for this application; a larger one
-> would fetch its code from S3 or from a build artifact instead.
 
 ### Step 3: Accessing the application
 
@@ -269,7 +255,7 @@ configure and connect to. In Part 3 you deploy exactly the same application as a
 - How an image registry (Amazon ECR) stores versioned, immutable artifacts
 - How configuration is injected at run time instead of being baked into the image
 - What a managed container service creates on your behalf, and what it costs
-- How to operate an application you cannot SSH into
+- What a request passes through before it reaches your container
 
 ### Prerequisites
 
@@ -346,10 +332,9 @@ aws ecr get-login-password --region [REGION] \
 and the pipe hands it straight to Docker. `--password-stdin` reads it from the pipe rather
 than the command line.
 
-You should see `Login Succeeded`. 
+You should see `Login Succeeded`.
 
-
-**3. Tag the image with its destination.** 
+**3. Tag the image with its destination.**
 
 ```
 docker tag chatbot-lab:latest [RegistryAddress]/[Repo]:v1
@@ -372,7 +357,7 @@ rows.
 
 1. Open the ECS console and choose **Express mode** in the navigation pane.
 2. For **Image URI**, choose **Browse ECR images** and select your `v1` image.
-3. Leave **Task execution role** and **Infrastructure role** as they are. 
+3. Leave **Task execution role** and **Infrastructure role** as they are.
 
 4. Open **Additional configurations** and set:
    - **Container port**: `8501` (the default is 80; Streamlit does not listen there)
@@ -380,13 +365,11 @@ rows.
    - **Environment variables**: `AWS_REGION`, `OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`,
      `BEDROCK_CHAT_MODEL_ID`
    - **Task role**: choose **`chatbot-lab-task-role`** from the list. This role is what gives the container permission to call Bedrock and OpenSearch.
-  
+
 5. Choose **Create**, then open the **Application URL** when the deployment finishes.
 
 You gave AWS an image and four settings. Note that the URL is **HTTPS** -- you did not
 request a certificate or configure a load balancer.
-
-
 
 ### Step 4: Find out what AWS actually built
 
@@ -409,12 +392,9 @@ down its name:
 and what does it pass through before reaching the container? Compare that drawing with
 Part 2, where a request went straight to a public IP on port 8501.
 
+### Step 5: Compare the two deployments
 
-
-
-### Step 8: Compare the two deployments
-
-Fill this in from your own experience of Parts 2 and 3:
+Fill this in from what you did in Parts 2 and 3, and from what you found in Step 4:
 
 | | Part 2 (EC2) | Part 3 (container) |
 |---|---|---|
