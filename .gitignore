@@ -1,7 +1,12 @@
+# Credentials and per-student configuration - never commit these
 config.ini
+.env
+*.pem
+*.key
+
+# Local working files
+downloaded_pdfs/
 __pycache__/
 *.pyc
 .venv/
 venv/
-downloaded_pdfs/
-.env
