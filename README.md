@@ -99,10 +99,11 @@ Where:
 The script reads your own identity from the AWS CLI, so you no longer pass your IAM user
 or account ID; it prints the identity it grants access to.
 
-Only *you* can read the collection by default. The last argument also admits the role that
-the container runs as in Part 3: OpenSearch Serverless checks principals in this policy
-separately from IAM, so a role with the right IAM permissions is still refused unless it is
-named here.
+Only *you* can read the collection by default. The last argument also admits the **role**
+that the application runs as in Parts 2 and 3 -- roles are explained in Part 2, where you
+first use one. Note it now, because OpenSearch Serverless checks the principals in this
+policy separately from IAM: a role with the right IAM permissions is still refused unless
+it is named here.
 
 Optional: `--region` (default `us-east-1`).
 
@@ -191,6 +192,26 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
    `config.ini` is gitignored. Never commit it.
 
    `endpoint` and `index_name` are the values from Part 1.
+
+   **Notice there are no AWS keys in this file.** In Part 1 you called AWS as yourself,
+   using the keys `aws configure` stored on your machine. The instance you are about to
+   launch is not you, and copying your keys onto it would be the wrong answer: they are
+   long-lived, they would sit in a file on a machine you throw away at the end of the lab,
+   and anyone who reached that machine would have them.
+
+   Instead the instance is given an **IAM role**. A role is a set of permissions with no
+   password and no keys, that a *service* is allowed to assume. When an instance carries
+   one, AWS publishes short-lived credentials for it to an address only that instance can
+   reach, and refreshes them automatically. Any AWS SDK looks there on its own, which is
+   why `chatbot.py` creates its client with no credentials at all:
+
+    ```python
+    session = boto3.Session(region_name=region)
+    ```
+
+   Nothing to copy, nothing to leak, nothing to rotate. You will attach the role in the
+   next step, and use the same role again for the container in Part 3 -- one identity, two
+   different ways of running the application.
 
    For `chat_model_id` the lab uses **Claude Haiku 4.5**, the cheapest current-generation
    Claude model. Note the `us.` prefix:
