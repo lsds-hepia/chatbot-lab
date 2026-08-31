@@ -79,8 +79,8 @@ def createNetworkPolicy(client,policy_name,collection_name):
 def createAccessPolicy(client, policy_name, collection_name, MY_ARN, TASK_ROLE_ARN):
     """Creates a data access policy for the specified collection."""
 
-    ## You run Parts 1 and 2 yourself. The task role runs the container in Part 3,
-    ## and OpenSearch treats it as a different principal, so it has to be listed too.
+    ## You run Part 1 yourself. The application runs on a server in Parts 2 and 3 and
+    ## uses the role, which OpenSearch treats as a different principal, so it is listed too.
     principals = [MY_ARN]
     if TASK_ROLE_ARN:
         principals.append(TASK_ROLE_ARN)
@@ -170,6 +170,6 @@ if __name__== "__main__":
     parser.add_argument("--collection_name", required=True, help="The name of the collection")
     parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     parser.add_argument("--task_role_arn", default=None,
-                        help="ARN of the role the container uses in Part 3")
+                        help="ARN of the role the application uses in Parts 2 and 3")
     args = parser.parse_args()
     main(args.collection_name, args.region, args.task_role_arn)
