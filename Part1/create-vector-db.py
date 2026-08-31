@@ -76,12 +76,12 @@ def createNetworkPolicy(client,policy_name,collection_name):
             raise error
 
 
-def createAccessPolicy(client, policy_name, collection_name, IAM_USER, ACCOUNT_ID, TASK_ROLE_ARN):
+def createAccessPolicy(client, policy_name, collection_name, MY_ARN, TASK_ROLE_ARN):
     """Creates a data access policy for the specified collection."""
 
-    ## The IAM user runs Parts 1 and 2. The task role runs the container in Part 3,
+    ## You run Parts 1 and 2 yourself. The task role runs the container in Part 3,
     ## and OpenSearch treats it as a different principal, so it has to be listed too.
-    principals = [f"arn:aws:iam::{ACCOUNT_ID}:user/{IAM_USER}"]
+    principals = [MY_ARN]
     if TASK_ROLE_ARN:
         principals.append(TASK_ROLE_ARN)
 
@@ -147,14 +147,28 @@ def waitForCollectionCreation(client, collection_name):
     raise SystemExit("Collection did not become ACTIVE in 10 minutes; check the console.")
 
 
-def main(collection_name, IAM_USER, ACCOUNT_ID, region, TASK_ROLE_ARN):
+## Ask AWS who we are, instead of making the student type it
+def get_my_arn(region):
+    arn = boto3.client('sts', region_name=region).get_caller_identity()['Arn']
+    ## An assumed role looks like arn:aws:sts::123:assumed-role/RoleName/session,
+    ## but a policy has to name the role itself.
+    if ':assumed-role/' in arn:
+        account = arn.split(':')[4]
+        role = arn.split('/')[1]
+        arn = f"arn:aws:iam::{account}:role/{role}"
+    return arn
+
+
+def main(collection_name, region, TASK_ROLE_ARN):
     client = boto3.client('opensearchserverless', region_name=region)
+    MY_ARN = get_my_arn(region)
+    print("Granting access to:", MY_ARN)
     encryption_policy_name = f'{collection_name}-encryption-policy'
     network_policy_name = f'{collection_name}-network-policy'
     access_policy_name = f'{collection_name}-access-policy'
     createEncryptionPolicy(client, encryption_policy_name, collection_name)
     createNetworkPolicy(client, network_policy_name, collection_name)
-    createAccessPolicy(client, access_policy_name, collection_name, IAM_USER, ACCOUNT_ID, TASK_ROLE_ARN)
+    createAccessPolicy(client, access_policy_name, collection_name, MY_ARN, TASK_ROLE_ARN)
     collection = client.create_collection(name=collection_name,type='VECTORSEARCH')
     ENDPOINT= waitForCollectionCreation(client,collection_name)
 
@@ -164,10 +178,8 @@ def main(collection_name, IAM_USER, ACCOUNT_ID, region, TASK_ROLE_ARN):
 if __name__== "__main__":
     parser = argparse.ArgumentParser(description="Create collection")
     parser.add_argument("--collection_name", required=True, help="The name of the collection")
-    parser.add_argument("--iam_user", required=True, help="The iam user")
-    parser.add_argument("--account_id", required=True, help="The account id")
     parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
     parser.add_argument("--task_role_arn", default=None,
                         help="ARN of the role the container uses in Part 3")
     args = parser.parse_args()
-    main(args.collection_name, args.iam_user, args.account_id, args.region, args.task_role_arn)
+    main(args.collection_name, args.region, args.task_role_arn)

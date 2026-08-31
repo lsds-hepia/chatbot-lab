@@ -89,14 +89,15 @@ Optional: `--region` (default `us-east-1`).
 
 Create a vector database for storing embeddings by running:
 
-`python3 create-vector-db.py --collection_name [Name_of_collection] --iam_user [YourIAM_user] --account_id [YourAccount_ID] --task_role_arn [TaskRoleArn]`
+`python3 create-vector-db.py --collection_name [Name_of_collection] --task_role_arn [TaskRoleArn]`
 
 Where:
 - **[Name_of_collection]**: Name of the collection that you want to create.
-- **[YourIAM_user]** : the IAM user of your account.
-- **[YourAccount_ID]** : the ACCOUNT ID of your account.
 - **[TaskRoleArn]**: the role your instructor created, for example
   `arn:aws:iam::[YourAccount_ID]:role/chatbot-lab-task-role`.
+
+The script reads your own identity from the AWS CLI, so you no longer pass your IAM user
+or account ID; it prints the identity it grants access to.
 
 Only *you* can read the collection by default. The last argument also admits the role that
 the container runs as in Part 3: OpenSearch Serverless checks principals in this policy
@@ -105,8 +106,7 @@ named here.
 
 Optional: `--region` (default `us-east-1`).
 
-You will find YourIAM_user and YourAccount_ID when you click on your account ID in the top
-right-hand corner of the AWS Amazon portal, or by running `aws sts get-caller-identity`.
+
 
 The script performs the following actions:
 
