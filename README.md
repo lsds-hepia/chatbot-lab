@@ -96,8 +96,6 @@ Where:
 - **[TaskRoleArn]**: the identifier of the role your instructor created, for example
   `arn:aws:iam::[YourAccount_ID]:role/chatbot-lab-task-role`.
 
-The script reads your own identity from the AWS CLI, so you do not pass your IAM user or
-account ID; it prints the identity it grants access to.
 
 **What is a role, and why does the database need to know about it?**
 
@@ -110,14 +108,6 @@ runs on a server, and a server is given an **IAM role** instead: a set of permis
 no password and no keys, that AWS lends to a machine for a few hours at a time. An **ARN**
 (*Amazon Resource Name*) is simply the full identifier of an AWS resource -- here, of that
 role.
-
-So the collection has to admit two identities: **you**, for the work you do now, and **the
-role**, for the application later. That is what the two arguments do.
-
-> Adding the role here does not give it access on its own. OpenSearch Serverless checks
-> this policy *separately* from IAM permissions, so a role that IAM allows is still refused
-> unless it is named here -- and the error is a bare `403 Forbidden` that says nothing
-> about which of the two checks failed.
 
 Optional: `--region` (default `us-east-1`).
 
@@ -266,37 +256,38 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 
 ### Step 2: Launching the Instance
 
-Use the provided `create_instance.py` script to deploy your EC2 instance with the essential
-startup configurations.
+`create_instance.py` starts an instance and sends it everything it needs to run the
+chatbot: your `chatbot.py`, your `requirements.txt` and your `config.ini` all travel with
+the instance as its **user data**, the script EC2 runs once at first boot.
 
-- **ImageId**: a custom Amazon Machine Image (AMI) containing the lab code and its
-  dependencies at `/home/ubuntu/chatbot-lab`. Ask your instructor for the current AMI ID
-  for your region.
+Run:
 
-  > **Instructors:** the instance runs the copy of `chatbot.py` baked into the AMI, not this
-  > repository. After updating this repo you must rebuild the AMI (updated code at
-  > `/home/ubuntu/chatbot-lab`, and a venv at `/home/ubuntu/chatbotlab` with the current
-  > `Part2/requirements.txt` installed), otherwise students still run the old app.
-- **UserData**: a script run once at first boot. It writes `config.ini` onto the instance,
-  creates the virtualenv if the AMI does not already have one, and starts the application.
-  Everything it does is logged to `/var/log/chatbot-lab.log`.
-
-Run the following command to create your instance:
-
-`python3 create_instance.py --ami_id [AMI_ID] --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID] --instance_profile [InstanceProfile]`
+`python3 create_instance.py --key_pair_name [KeyPairName] --security_group_id [SecurityGroupID] --instance_profile [InstanceProfile]`
 
 Where:
 
-- **[AMI_ID]**: The AMI provided by your instructor.
 - **[KeyPairName]**: The name of the key_pair created earlier.
 - **[SecurityGroupID]**: The id of the security group created earlier.
 - **[InstanceProfile]**: the instance profile your instructor created, for example
   `chatbot-lab-task-role`. The instance takes its AWS credentials from this role, which is
   why `config.ini` holds no keys.
 
-Optional: `--instance_type` (default `t3.micro`).
+Optional: `--instance_type` (default `t3.micro`), `--region`, and `--ami_id`.
+
+There is no image to prepare. The script looks up the latest official Ubuntu 24.04 image
+and prints which one it chose, then the instance installs Python, creates a virtualenv,
+installs the requirements and starts Streamlit. Everything it does is written to
+`/var/log/chatbot-lab.log`.
 
 The script waits for the instance to start and prints its public IP.
+
+> **Why send the code instead of preparing an image?** An image would have to be rebuilt
+> every time the application changes, and a lab image that is a year old usually no longer
+> matches the code in the repository -- assuming it has not been deleted in the meantime.
+> Sending the application with the instance means what runs is always what you have in
+> front of you: edit `chatbot.py`, launch again, and your change is there. The whole
+> startup script has to fit in 16 KB, which is plenty for this application; a larger one
+> would fetch its code from S3 or from a build artifact instead.
 
 ### Step 3: Accessing the application
 
@@ -467,53 +458,8 @@ down its name:
 and what does it pass through before reaching the container? Compare that drawing with
 Part 2, where a request went straight to a public IP on port 8501.
 
-### Step 5: Operate it without SSH
 
-There is no SSH into a Fargate task. Open **CloudWatch > Log groups** and find your
-service's log group. This is where `print()` output and Streamlit's own logs now go.
 
-Now break it on purpose:
-
-1. Edit the `BEDROCK_CHAT_MODEL_ID` environment variable to an invalid value and update
-   the service.
-2. Ask the chatbot a question.
-3. Find the error in CloudWatch and identify the cause **without** connecting to any server.
-
-Then set it back.
-
-### Step 6: Scaling, and a problem to discover
-
-In the ECS console, set the **minimum number of tasks** to 2 and update the service.
-
-Once two tasks are running, open the application URL, ask a question, then open the same
-URL in a private browser window and ask another. Compare the chat histories.
-
-**What happened, and why?** The AWS documentation describes Express Mode as being for
-*stateless* applications. Look at `chatbot.py`: `st.session_state.chat_history` lives in
-the memory of one task. The load balancer sends your two browser sessions to different
-tasks, and neither knows about the other's conversation.
-
-Discuss: what would you have to change to run this application on more than one task?
-Where should the chat history live instead?
-
-Set the minimum back to 1 when you are done.
-
-### Step 7: Ship a new version
-
-Change the title in `Part3/chatbot.py`, then build, tag as `v2` and push:
-
-```
-docker build --platform linux/amd64 --provenance=false -t chatbot-lab .
-docker tag chatbot-lab:latest [RegistryAddress]/[Repo]:v2
-docker push [RegistryAddress]/[Repo]:v2
-```
-
-Watch the push output: most layers say `Layer already exists` and only the last one
-uploads. That is the Dockerfile layer ordering paying off.
-
-Update the service to point at `v2` and watch the deployment. The old container is replaced
-by a new one; nothing is patched in place. Then point it back at `v1` -- you have just
-rolled back a release.
 
 ### Step 8: Compare the two deployments
 
@@ -551,11 +497,5 @@ Then, in the console:
   group, certificate and scaling policy it created)
 - Delete the **ECR repository** holding your images
 - Terminate the **EC2 instance** from Part 2 if it is still running
-
-> ### Cost warning
-> An **OpenSearch Serverless collection bills continuously** for a minimum number of
-> OCU-hours, whether or not you are querying it, and an Application Load Balancer bills by
-> the hour even with no traffic. These two are the expensive items in this lab -- deleting
-> the S3 bucket and terminating the EC2 instance is not enough on its own.
 
 Check the console afterwards and confirm that no collection and no load balancer remain.
