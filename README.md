@@ -89,12 +89,19 @@ Optional: `--region` (default `us-east-1`).
 
 Create a vector database for storing embeddings by running:
 
-`python3 create-vector-db.py --collection_name [Name_of_collection] --iam_user [YourIAM_user] --account_id [YourAccount_ID]`
+`python3 create-vector-db.py --collection_name [Name_of_collection] --iam_user [YourIAM_user] --account_id [YourAccount_ID] --task_role_arn [TaskRoleArn]`
 
 Where:
 - **[Name_of_collection]**: Name of the collection that you want to create.
 - **[YourIAM_user]** : the IAM user of your account.
 - **[YourAccount_ID]** : the ACCOUNT ID of your account.
+- **[TaskRoleArn]**: the role your instructor created, for example
+  `arn:aws:iam::[YourAccount_ID]:role/chatbot-lab-task-role`.
+
+Only *you* can read the collection by default. The last argument also admits the role that
+the container runs as in Part 3: OpenSearch Serverless checks principals in this policy
+separately from IAM, so a role with the right IAM permissions is still refused unless it is
+named here.
 
 Optional: `--region` (default `us-east-1`).
 
@@ -406,10 +413,8 @@ rows.
    - **Health check path**: `/_stcore/health` (Streamlit's health endpoint)
    - **Environment variables**: `AWS_REGION`, `OPENSEARCH_ENDPOINT`, `OPENSEARCH_INDEX`,
      `BEDROCK_CHAT_MODEL_ID`
-   - **Task role**: choose **`chatbot-lab-task-role`** from the list. Your instructor has
-     created it for you -- student accounts cannot create IAM roles, so ignore the
-     **Create new role** button. This role is what gives the container permission to call
-     Bedrock and OpenSearch, which is why no access keys are needed.
+   - **Task role**: choose **`chatbot-lab-task-role`** from the list. This role is what gives the container permission to call Bedrock and OpenSearch.
+  
 5. Choose **Create**, then open the **Application URL** when the deployment finishes.
 
 You gave AWS an image and four settings. Note that the URL is **HTTPS** -- you did not

@@ -4,6 +4,7 @@
 
 import boto3
 import botocore
+import json
 import time
 import argparse
 
@@ -75,47 +76,53 @@ def createNetworkPolicy(client,policy_name,collection_name):
             raise error
 
 
-def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID):
+def createAccessPolicy(client, policy_name, collection_name, IAM_USER, ACCOUNT_ID, TASK_ROLE_ARN):
     """Creates a data access policy for the specified collection."""
+
+    ## The IAM user runs Parts 1 and 2. The task role runs the container in Part 3,
+    ## and OpenSearch treats it as a different principal, so it has to be listed too.
+    principals = [f"arn:aws:iam::{ACCOUNT_ID}:user/{IAM_USER}"]
+    if TASK_ROLE_ARN:
+        principals.append(TASK_ROLE_ARN)
+
+    policy = [
+        {
+            "Rules": [
+                {
+                    "Resource": [f"collection/{collection_name}"],
+                    "Permission": [
+                        "aoss:CreateCollectionItems",
+                        "aoss:DeleteCollectionItems",
+                        "aoss:UpdateCollectionItems",
+                        "aoss:DescribeCollectionItems"
+                    ],
+                    "ResourceType": "collection"
+                },
+                {
+                    "Resource": [f"index/{collection_name}/*"],
+                    "Permission": [
+                        "aoss:CreateIndex",
+                        "aoss:DeleteIndex",
+                        "aoss:UpdateIndex",
+                        "aoss:DescribeIndex",
+                        "aoss:ReadDocument",
+                        "aoss:WriteDocument"
+                    ],
+                    "ResourceType": "index"
+                }
+            ],
+            "Principal": principals
+        }
+    ]
+
     try:
-        policy_content = f"""
-        [
-            {{
-                "Rules": [
-                    {{
-                        "Resource": ["collection/{collection_name}"],
-                        "Permission": [
-                            "aoss:CreateCollectionItems",
-                            "aoss:DeleteCollectionItems",
-                            "aoss:UpdateCollectionItems",
-                            "aoss:DescribeCollectionItems"
-                        ],
-                        "ResourceType": "collection"
-                    }},
-                    {{
-                        "Resource": ["index/{collection_name}/*"],
-                        "Permission": [
-                            "aoss:CreateIndex",
-                            "aoss:DeleteIndex",
-                            "aoss:UpdateIndex",
-                            "aoss:DescribeIndex",
-                            "aoss:ReadDocument",
-                            "aoss:WriteDocument"
-                        ],
-                        "ResourceType": "index"
-                    }}
-                ],
-                "Principal": ["arn:aws:iam::{ACCOUNT_ID}:user/{IAM_USER}"]
-            }}
-        ]
-        """
         response = client.create_access_policy(
             description=f'Data access policy for {collection_name}',
             name=policy_name,
-            policy=policy_content,
+            policy=json.dumps(policy),
             type='data'
         )
-        print('\nAccess policy created:')
+        print('\nAccess policy created for:', principals)
         print(response)
     except botocore.exceptions.ClientError as error:
         if error.response['Error']['Code'] == 'ConflictException':
@@ -123,9 +130,7 @@ def createAccessPolicy(client, policy_name, collection_name, IAM_USER,ACCOUNT_ID
         else:
             raise error
 
-        
 
-        
 def waitForCollectionCreation(client, collection_name):
     """Waits for the collection to become active."""
     for attempt in range(60):
@@ -142,14 +147,14 @@ def waitForCollectionCreation(client, collection_name):
     raise SystemExit("Collection did not become ACTIVE in 10 minutes; check the console.")
 
 
-def main(collection_name,IAM_USER,ACCOUNT_ID,region):
+def main(collection_name, IAM_USER, ACCOUNT_ID, region, TASK_ROLE_ARN):
     client = boto3.client('opensearchserverless', region_name=region)
     encryption_policy_name = f'{collection_name}-encryption-policy'
     network_policy_name = f'{collection_name}-network-policy'
     access_policy_name = f'{collection_name}-access-policy'
     createEncryptionPolicy(client, encryption_policy_name, collection_name)
     createNetworkPolicy(client, network_policy_name, collection_name)
-    createAccessPolicy(client, access_policy_name, collection_name,IAM_USER,ACCOUNT_ID)
+    createAccessPolicy(client, access_policy_name, collection_name, IAM_USER, ACCOUNT_ID, TASK_ROLE_ARN)
     collection = client.create_collection(name=collection_name,type='VECTORSEARCH')
     ENDPOINT= waitForCollectionCreation(client,collection_name)
 
@@ -162,5 +167,7 @@ if __name__== "__main__":
     parser.add_argument("--iam_user", required=True, help="The iam user")
     parser.add_argument("--account_id", required=True, help="The account id")
     parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
+    parser.add_argument("--task_role_arn", default=None,
+                        help="ARN of the role the container uses in Part 3")
     args = parser.parse_args()
-    main(args.collection_name,args.iam_user,args.account_id,args.region)
+    main(args.collection_name, args.iam_user, args.account_id, args.region, args.task_role_arn)
