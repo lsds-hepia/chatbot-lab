@@ -147,21 +147,11 @@ def waitForCollectionCreation(client, collection_name):
     raise SystemExit("Collection did not become ACTIVE in 10 minutes; check the console.")
 
 
-## Ask AWS who we are, instead of making the student type it
-def get_my_arn(region):
-    arn = boto3.client('sts', region_name=region).get_caller_identity()['Arn']
-    ## An assumed role looks like arn:aws:sts::123:assumed-role/RoleName/session,
-    ## but a policy has to name the role itself.
-    if ':assumed-role/' in arn:
-        account = arn.split(':')[4]
-        role = arn.split('/')[1]
-        arn = f"arn:aws:iam::{account}:role/{role}"
-    return arn
-
-
 def main(collection_name, region, TASK_ROLE_ARN):
     client = boto3.client('opensearchserverless', region_name=region)
-    MY_ARN = get_my_arn(region)
+
+    ## Your own identity, so you do not have to type it
+    MY_ARN = boto3.client('sts', region_name=region).get_caller_identity()['Arn']
     print("Granting access to:", MY_ARN)
     encryption_policy_name = f'{collection_name}-encryption-policy'
     network_policy_name = f'{collection_name}-network-policy'
