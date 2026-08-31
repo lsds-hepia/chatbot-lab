@@ -197,62 +197,12 @@ Before deploying the chatbot on an EC2 instance, complete the following prelimin
 
    `endpoint` and `index_name` are the values from Part 1.
 
-   **Notice there are no AWS keys in this file.** In Part 1 you called AWS as yourself,
-   using the keys `aws configure` stored on your machine. The instance you are about to
-   launch is not you, and copying your keys onto it would be the wrong answer: they are
-   long-lived, they would sit in a file on a machine you throw away at the end of the lab,
-   and anyone who reached that machine would have them.
-
-   Instead the instance is given the **IAM role** you named in Part 1. AWS publishes
-   short-lived credentials for it to an address only that instance can reach, and refreshes
-   them automatically. Any AWS SDK looks there on its own, which is why `chatbot.py`
-   creates its client with no credentials at all:
-
-    ```python
-    session = boto3.Session(region_name=region)
-    ```
-
-   Nothing to copy, nothing to leak, nothing to rotate. You will attach the role in the
-   next step, and use the same role again for the container in Part 3 -- one identity, two
-   different ways of running the application.
-
    For `chat_model_id` the lab uses **Claude Haiku 4.5**, the cheapest current-generation
    Claude model. Note the `us.` prefix:
 
     ```
     us.anthropic.claude-haiku-4-5-20251001-v1:0
     ```
-
-   > **The prefix is not optional.** Recent Claude models cannot be called on demand by
-   > their bare ID -- they must be invoked through a *cross-region inference profile*,
-   > whose ID starts with `us.` (or `global.`). Using the bare
-   > `anthropic.claude-haiku-4-5-20251001-v1:0` fails with:
-   >
-   > ```
-   > ValidationException: Invocation of model ID anthropic.claude-haiku-4-5-20251001-v1:0
-   > with on-demand throughput isn't supported. Retry your request with the ID or ARN of an
-   > inference profile that contains this model.
-   > ```
-   >
-   > List the profiles available to you with:
-   >
-   > ```
-   > aws bedrock list-inference-profiles --region us-east-1 \
-   >   --query "inferenceProfileSummaries[].inferenceProfileId" --output text
-   > ```
-   >
-   > Embedding models like `amazon.titan-embed-text-v2:0` are **not** affected -- they are
-   > called by their bare ID.
-
-   > If nobody in your account has invoked an Anthropic model before, the first call may
-   > require you to submit use case details. Do this once now: open the model in the
-   > **Bedrock playground** and send it any message. It is much easier to deal with there
-   > than as a failure inside the chatbot.
-
-   > Models served from AWS Marketplace need a user with Marketplace permissions to invoke
-   > them once, which then enables them account-wide. Your account administrator can also
-   > restrict models with IAM policies or SCPs, so if a model works in the playground but
-   > not from the lab, check with them.
 
 ### Step 2: Launching the Instance
 
@@ -268,9 +218,10 @@ Where:
 
 - **[KeyPairName]**: The name of the key_pair created earlier.
 - **[SecurityGroupID]**: The id of the security group created earlier.
-- **[InstanceProfile]**: the instance profile your instructor created, for example
-  `chatbot-lab-task-role`. The instance takes its AWS credentials from this role, which is
-  why `config.ini` holds no keys.
+- **[InstanceProfile]**: the instance profile your instructor created,
+  `chatbot-lab-task-role`. It is what attaches the IAM role to the instance: EC2 cannot
+  take a role directly, only an instance profile holding one. This is how the machine
+  gets its AWS credentials, and why `config.ini` contains no keys.
 
 Optional: `--instance_type` (default `t3.micro`), `--region`, and `--ami_id`.
 
