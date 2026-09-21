@@ -1,27 +1,39 @@
 # Creator: Abir Chebbi (abir.chebbi@hesge.ch)
 
-
 import boto3
-
-BUCKET_NAME = ''
-
-S3_CLIENT = boto3.client('s3')
-S3_RESOURCE = boto3.resource('s3')
-
-# # # Delete Bucket
-
-# First, delete all objects in the Bucket
-bucket = S3_RESOURCE.Bucket(BUCKET_NAME)
-
-print("Deleting all objects in Bucket\n")
-bucket.objects.all().delete()
+import argparse
 
 
-print("Deleting Bucket")
-# Bucket Deletion
-response = S3_CLIENT.delete_bucket(
-    Bucket=BUCKET_NAME 
+def delete_bucket(bucket_name, region):
+    s3_resource = boto3.resource('s3', region_name=region)
+    s3_client = boto3.client('s3', region_name=region)
 
-)
+    bucket = s3_resource.Bucket(bucket_name)
 
-print(response)
+    print("Deleting all objects in Bucket\n")
+    bucket.objects.all().delete()
+    ## Also remove object versions if versioning is enabled
+    try:
+        bucket.object_versions.all().delete()
+    except Exception:
+        pass
+
+    print("Deleting Bucket")
+    response = s3_client.delete_bucket(Bucket=bucket_name)
+    print(response)
+
+
+def main(bucket_name, region):
+    confirm = input(f"Permanently delete bucket '{bucket_name}' and everything in it? [y/N] ")
+    if confirm.strip().lower() != 'y':
+        print("Aborted.")
+        return
+    delete_bucket(bucket_name, region)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Delete the lab S3 bucket and its contents")
+    parser.add_argument("--bucket_name", required=True, help="The name of the S3 bucket to delete")
+    parser.add_argument("--region", default="us-east-1", help="AWS region (default: us-east-1)")
+    args = parser.parse_args()
+    main(args.bucket_name, args.region)
